@@ -4,15 +4,15 @@ import numpy as np
 
 
 def get_files(folder, name_filter=None, extension_filter=None):
-    """Helper function that returns the list of files in a specified folder
-    with a specified extension.
+    """Returns the list of files in a folder.
 
-    Keyword arguments:
-    - folder (``string``): The path to a folder.
-    - name_filter (```string``, optional): The returned files must contain
-    this substring in their filename. Default: None; files are not filtered.
-    - extension_filter (``string``, optional): The desired file extension.
-    Default: None; files are not filtered
+    Args:
+        folder (string): The path to a folder.
+        name_filter (string, optional): The returned files must contain
+            this substring in their filename. Default: None; files are not
+            filtered.
+        extension_filter (string, optional): The desired file extension.
+            Default: None; files are not filtered
 
     """
     if not os.path.isdir(folder):
@@ -53,11 +53,11 @@ def get_files(folder, name_filter=None, extension_filter=None):
 def pil_loader(data_path, label_path, shape):
     """Loads a sample and label image given their path as PIL images.
 
-    Keyword arguments:
-    - data_path (``string``): The filepath to the image.
-    - label_path (``string``): The filepath to the ground-truth image.
-    - shape (``tuple``): The requested size in pixels, as a 2-tuple:
-    (width,height). If set to ``None``, resizing is not performed.
+    Args:
+        data_path (string): The filepath to the image.
+        label_path (string): The filepath to the ground-truth image.
+        shape (tuple): The requested size in pixels, as a 2-tuple:
+            (width,height). If set to ``None``, resizing is not performed.
 
     Returns the image and the label as PIL images.
 
@@ -75,12 +75,25 @@ def pil_loader(data_path, label_path, shape):
 
 
 def remap(image, old_values, new_values):
+    """Replaces pixels values with new values.
+
+    Pixel values from ``old_values`` in ``image`` are replaced index by
+    index with values from ``new_values``.
+
+    Args:
+        image (PIL.Image or numpy.ndarray): The image to process.
+        old_values (tuple): A tuple of values to be replaced.
+        new_values (tuple): A tuple of new values to replace ``old_values``.
+
+    """
     assert isinstance(image, Image.Image) or isinstance(
-        image, np.ndarray), "image must be of type PIL.Image or numpy.ndarray"
+        image, np.ndarray
+    ), "image must be of type PIL.Image or numpy.ndarray"
     assert type(new_values) is tuple, "new_values must be of type tuple"
     assert type(old_values) is tuple, "old_values must be of type tuple"
     assert len(new_values) == len(
-        old_values), "new_values and old_values must have the same length"
+        old_values
+    ), "new_values and old_values must have the same length"
 
     # If image is a PIL.Image convert it to a numpy array
     if isinstance(image, Image.Image):
@@ -98,23 +111,21 @@ def remap(image, old_values, new_values):
 
 
 def enet_weighing(dataloader, num_classes, c=1.02):
-    """Computes class weights as described in the ENet paper:
+    """Computes class weights as described in the ENet paper.
 
         w_class = 1 / (ln(c + p_class)),
-
     where c is usually 1.02 and p_class is the propensity score of that
     class:
-
         propensity_score = freq_class / total_pixels.
 
     References: https://arxiv.org/abs/1606.02147
 
-    Keyword arguments:
-    - dataloader (``data.Dataloader``): A data loader to iterate over the
-    dataset.
-    - num_classes (``int``): The number of classes.
-    - c (``int``, optional): AN additional hyper-parameter which restricts
-    the interval of values for the weights. Default: 1.02.
+    Args:
+        dataloader (utils.Sequence): A data loader to iterate over the
+            dataset.
+        num_classes (int): The number of classes.
+        c (int, optional): AN additional hyper-parameter which restricts
+            the interval of values for the weights. Default: 1.02.
 
     """
     class_count = 0
@@ -138,20 +149,18 @@ def enet_weighing(dataloader, num_classes, c=1.02):
 
 
 def median_freq_balancing(dataloader, num_classes):
-    """Computes class weights using median frequency balancing as described
-    in https://arxiv.org/abs/1411.4734:
+    """Computes class weights using median frequency balancing.
 
         w_class = median_freq / freq_class,
-
     where freq_class is the number of pixels of a given class divided by
     the total number of pixels in images where that class is present, and
     median_freq is the median of freq_class.
 
-    Keyword arguments:
-    - dataloader (``data.Dataloader``): A data loader to iterate over the
-    dataset.
-    whose weights are going to be computed.
-    - num_classes (``int``): The number of classes
+    References: https://arxiv.org/abs/1411.4734
+
+    Args:
+        dataloader (iterable): Any iterable type to iterate over the dataset.
+        num_classes (int): The number of classes
 
     """
     class_count = 0

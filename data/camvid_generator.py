@@ -6,19 +6,20 @@ from . import utils
 
 
 class CamVidGenerator(Sequence):
-    """CamVid dataset loader where the dataset is arranged as in
-    https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid.
+    """CamVid dataset generator.
 
+    The dataset must be arranged as in https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid.
 
-    Keyword arguments:
-    - root_dir (``string``): Root directory path.
-    - batch_size(``int``): The batch size.
-    - shape (``tuple``): The requested size in pixels, as a 2-tuple:
-    (width,height).
-    - mode (``string``): The type of dataset: 'train' for training set, 'val'
-    for validation set, and 'test' for test set.
+    Args:
+        root_dir (string): Root directory path.
+        batch_size(int): The batch size.
+        shape (tuple): The requested size in pixels, as a 2-tuple:
+            (width,height).
+        mode (string): The type of dataset: 'train' for training set, 'val'
+            for validation set, and 'test' for test set.
 
     """
+
     # Training dataset root folders
     train_folder = 'train'
     train_lbl_folder = 'trainannot'
@@ -48,7 +49,7 @@ class CamVidGenerator(Sequence):
         ('pedestrian', (64, 64, 0)),
         ('bicyclist', (0, 128, 192)),
         ('unlabelled', (0, 0, 0))
-    ])
+    ])  # yapf: disable
 
     def __init__(self, root_dir, batch_size, shape=None, mode='train'):
         self.root_dir = root_dir
@@ -60,42 +61,51 @@ class CamVidGenerator(Sequence):
             # Get the training data and labels filepaths
             self.train_images = utils.get_files(
                 os.path.join(root_dir, self.train_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
 
             self.train_labels = utils.get_files(
                 os.path.join(root_dir, self.train_lbl_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
         elif self.mode.lower() == 'val':
             # Get the validation data and labels filepaths
             self.val_images = utils.get_files(
                 os.path.join(root_dir, self.val_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
 
             self.val_labels = utils.get_files(
                 os.path.join(root_dir, self.val_lbl_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
         elif self.mode.lower() == 'test':
             # Get the test data and labels filepaths
             self.test_images = utils.get_files(
                 os.path.join(root_dir, self.test_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
 
             self.test_labels = utils.get_files(
                 os.path.join(root_dir, self.test_lbl_folder),
-                extension_filter=self.img_extension)
+                extension_filter=self.img_extension
+            )
         else:
-            raise RuntimeError("Unexpected dataset mode. "
-                               "Supported modes are: train, val and test")
+            raise RuntimeError(
+                "Unexpected dataset mode. "
+                "Supported modes are: train, val and test"
+            )
 
     def __getitem__(self, index):
-        """
+        """Gets a full batch of data.
+
         Args:
-        - index (``int``): index of the batch size to return.
+            index (int): index of the batch size to return.
 
         Returns:
-        A tuple of ``numpy.array`` (image_batch, label_batch) where image_batch
-        is a batch of images from tis dataset and label_batch are the
-        corresponding ground-truth labels.
+        A tuple of ``numpy.array`` (image_batch, label_batch) where
+        image_batch is a batch of images from tis dataset and label_batch
+        are the corresponding ground-truth labels in categorical format.
 
         """
         # Create the variables that will contain the batch to return
@@ -104,38 +114,43 @@ class CamVidGenerator(Sequence):
 
         # Fill image_paths and label_paths with a batch size of image paths
         if self.mode.lower() == 'train':
-            image_paths = self.train_images[index * self.batch_size:(
-                index + 1) * self.batch_size]
-            label_paths = self.train_labels[index * self.batch_size:(
-                index + 1) * self.batch_size]
+            image_paths = self.train_images[index * self.batch_size:
+                                            (index + 1) * self.batch_size]
+            label_paths = self.train_labels[index * self.batch_size:
+                                            (index + 1) * self.batch_size]
         elif self.mode.lower() == 'val':
-            image_paths = self.val_images[index * self.batch_size:(
-                index + 1) * self.batch_size]
-            label_paths = self.val_labels[index * self.batch_size:(
-                index + 1) * self.batch_size]
+            image_paths = self.val_images[index * self.batch_size:
+                                          (index + 1) * self.batch_size]
+            label_paths = self.val_labels[index * self.batch_size:
+                                          (index + 1) * self.batch_size]
         elif self.mode.lower() == 'test':
-            image_paths = self.test_images[index * self.batch_size:(
-                index + 1) * self.batch_size]
-            label_paths = self.test_labels[index * self.batch_size:(
-                index + 1) * self.batch_size]
+            image_paths = self.test_images[index * self.batch_size:
+                                           (index + 1) * self.batch_size]
+            label_paths = self.test_labels[index * self.batch_size:
+                                           (index + 1) * self.batch_size]
         else:
-            raise RuntimeError("Unexpected dataset mode. "
-                               "Supported modes are: train, val and test")
+            raise RuntimeError(
+                "Unexpected dataset mode. "
+                "Supported modes are: train, val and test"
+            )
 
         # Load the batch size to PIL images and convert them to numpy arrays.
         # Labels are converted to a binary class matrix using to_categorical.
         for idx, image_path in enumerate(image_paths):
-            image, label = utils.pil_loader(image_path, label_paths[idx],
-                                            self.shape)
+            image, label = utils.pil_loader(
+                image_path,
+                label_paths[idx],
+                self.shape,
+            )
 
             image = np.asarray(image)
             label = to_categorical(np.asarray(label), len(self.color_encoding))
 
             # Initialize image_batch and label_batch if needed
             if image_batch is None:
-                image_batch = np.empty((self.batch_size,) + image.shape)
+                image_batch = np.empty((self.batch_size, ) + image.shape)
             if label_batch is None:
-                label_batch = np.empty((self.batch_size,) + label.shape)
+                label_batch = np.empty((self.batch_size, ) + label.shape)
 
             # Fill image_batch and label_batch iteratively
             image_batch[idx] = image
@@ -147,11 +162,14 @@ class CamVidGenerator(Sequence):
         """Returns the number of batch sizes in this dataset."""
         if self.mode.lower() == 'train':
             return int(
-                np.ceil(len(self.train_images) / float(self.batch_size)))
+                np.ceil(len(self.train_images) / float(self.batch_size))
+            )
         elif self.mode.lower() == 'val':
             return int(np.ceil(len(self.val_images) / float(self.batch_size)))
         elif self.mode.lower() == 'test':
             return int(np.ceil(len(self.test_images) / float(self.batch_size)))
         else:
-            raise RuntimeError("Unexpected dataset mode. "
-                               "Supported modes are: train, val and test")
+            raise RuntimeError(
+                "Unexpected dataset mode. "
+                "Supported modes are: train, val and test"
+            )
