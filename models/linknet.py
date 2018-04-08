@@ -1,11 +1,30 @@
 from keras.layers import Conv2D, MaxPooling2D, \
-    BatchNormalization, Activation, Add, Input, Lambda
+    BatchNormalization, Activation, Add, Input
 from keras.models import Model
 from keras.backend import int_shape, is_keras_tensor
 from .conv2d_transpose import Conv2DTranspose
 
 
 class LinkNet():
+    """LinkNet architecture.
+
+    The model follows the architecture presented in: https://arxiv.org/abs/1707.03718
+
+    Args:
+        num_classes (int): the number of classes to segment.
+        input_tensor (tensor, optional): Keras tensor
+            (i.e. output of `layers.Input()`) to use as image input for
+            the model. Default: None.
+        input_shape (tuple, optional): Shape tuple of the model input.
+            Default: None.
+        initial_block_filters (int, optional): The number of filters after
+            the initial block (see the paper for details on the initial
+            block). Default: None.
+        bias (bool, optional): If ``True``, adds a learnable bias.
+            Default: ``False``.
+
+    """
+
     def __init__(
         self,
         num_classes,
@@ -28,6 +47,12 @@ class LinkNet():
             self.input = Input(tensor=input_tensor, shape=input_shape)
 
     def get_model(self):
+        """Initializes a LinkNet model.
+
+        Returns:
+            A Keras model instance.
+
+        """
         # Initial block
         initial_block = Conv2D(
             self.initial_block_filters,
@@ -122,6 +147,28 @@ class LinkNet():
         padding='same',
         bias=False,
     ):
+        """Creates an encoder block.
+
+        The encoder block is a combination of two basic encoder blocks
+        (see ``_encoder_basic_block``). The first with stride 2 and the
+        the second with stride 1.
+
+        Args:
+            input (tensor): A tensor or variable.
+            out_filters (int): The number of filters in the block output.
+            kernel_size (int, tuple, list, optional): A tuple/list of 2
+                integers, specifying the height and width of the 2D kernel
+                window. In case it's a single integer, it's value is used
+                for all spatial dimensions. Default: 3.
+            padding (str, optional): One of "valid" or "same" (case-insensitive).
+                Default: "same".
+            bias (bool, optional): If ``True``, adds a learnable bias.
+                Default: ``False``.
+
+        Returns:
+            The output tensor of the block.
+
+        """
         x = self._encoder_basic_block(
             input,
             out_filters,
@@ -151,6 +198,36 @@ class LinkNet():
         padding='same',
         bias=False
     ):
+        """Creates a basic encoder block.
+
+        Main brach architecture:
+        1. Conv2D
+        2. BatchNormalization
+        3. ReLU
+        Residual branch architecture:
+        1. Conv2D, if `strides` is greater than 1
+        The output of the main and residual branches are summed.
+
+        Args:
+            input (tensor): A tensor or variable.
+            out_filters (int): The number of filters in the block output.
+            kernel_size (int, tuple, list, optional): A tuple/list of 2
+                integers, specifying the height and width of the 2D kernel
+                window. In case it's a single integer, it's value is used
+                for all spatial dimensions. Default: 3.
+            strides (int, tuple, list, optional): A tuple/list of 2
+                integers, specifying the strides along the height and width
+                of the 2D input. In case it's a single integer, it's value
+                is used for all spatial dimensions. Default: 1.
+            padding (str, optional): One of "valid" or "same" (case-insensitive).
+                Default: "same".
+            bias (bool, optional): If ``True``, adds a learnable bias.
+                Default: ``False``.
+
+        Returns:
+            The output tensor of the block.
+
+        """
         residual = input
 
         x = Conv2D(
@@ -181,13 +258,53 @@ class LinkNet():
         input,
         out_filters,
         kernel_size=3,
-        upsample_strides=2,
+        strides=2,
         projection_ratio=4,
         padding='same',
         output_padding=0,
         bias=False
     ):
-        internal_filters = int_shape(input)[-1] // 4
+        """Creates a decoder block.
+
+        Decoder block architecture:
+        1. Conv2D
+        2. BatchNormalization
+        3. ReLU
+        4. Conv2DTranspose
+        5. BatchNormalization
+        6. ReLU
+        7. Conv2D
+        8. BatchNormalization
+        9. ReLU
+
+        Args:
+            input (tensor): A tensor or variable.
+            out_filters (int): The number of filters in the block output.
+            kernel_size (int, tuple, list, optional): A tuple/list of 2
+                integers, specifying the height and width of the 2D kernel
+                window. In case it's a single integer, it's value is used
+                for all spatial dimensions. Default: 3.
+            strides (int, tuple, list, optional): A tuple/list of 2
+                integers, specifying the strides along the height and width
+                of the 2D input. In case it's a single integer, it's value
+                is used for all spatial dimensions. Default: 1.
+            projection_ratio (int, optional): A scale factor applied to
+                the number of input channels. The output of the first
+                convolution will have ``input_channels // projection_ratio``.
+                The goal is to decrease the number of parameters in the
+                transposed convolution layer. Default: 4.
+            padding (str, optional): One of "valid" or "same" (case-insensitive).
+                Default: "same".
+            output_padding: An integer or tuple/list of 2 integers specifying
+                the zero-apdding added to one side of the output.
+            bias (bool, optional): If ``True``, adds a learnable bias.
+                Default: ``False``.
+
+        Returns:
+            The output tensor of the block.
+
+        """
+        internal_filters = int_shape(input)[-1] // projection_ratio
         x = Conv2D(
             internal_filters,
             kernel_size=1,
@@ -200,7 +317,7 @@ class LinkNet():
         x = Conv2DTranspose(
             internal_filters,
             kernel_size=kernel_size,
-            strides=upsample_strides,
+            strides=strides,
             padding=padding,
             output_padding=output_padding,
             use_bias=bias

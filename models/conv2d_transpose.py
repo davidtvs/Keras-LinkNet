@@ -7,6 +7,7 @@ import keras.backend as K
 
 class Conv2DTranspose(Conv2D):
     """Transposed convolution layer (sometimes called Deconvolution).
+
     The need for transposed convolutions generally arises
     from the desire to use a transformation going in the opposite direction
     of a normal convolution, i.e., from something that has the shape of the
@@ -32,6 +33,8 @@ class Conv2DTranspose(Conv2D):
             Specifying any stride value != 1 is incompatible with specifying
             any `dilation_rate` value != 1.
         padding: one of `"valid"` or `"same"` (case-insensitive).
+        output_padding: An integer or tuple/list of 2 integers specifying
+            the zero-apdding added to one side of the output.
         data_format: A string,
             one of `channels_last` (default) or `channels_first`.
             The ordering of the dimensions in the inputs.
@@ -235,6 +238,17 @@ class Conv2DTranspose(Conv2D):
 
 
 def deconv_length(dim_size, stride_size, kernel_size, padding, output_padding):
+    """Determines output length of a transposed convolution given input length.
+
+    # Arguments
+        dim_size: Integer, input length.
+        stride_size: Integer, the stride along the length of `dim_size`
+        kernel_size: Integer, the kernel size along the length of `dim_size`
+        padding: One of `"valid"` or `"same"` (case-insensitive).
+        output_padding: Integer, the zero-apdding added to one side of the
+            output.
+
+    """
     assert padding in {'same', 'valid', 'full'}
     if padding == 'same':
         pad = kernel_size // 2
