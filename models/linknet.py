@@ -56,19 +56,31 @@ class LinkNet():
 
         # Decoder blocks
         decoder = self._decoder_block(
-            encoder4, self.initial_block_filters * 8, output_padding=(1, 0)
+            encoder4,
+            self.initial_block_filters * 8,
+            output_padding=(1, 0),
+            bias=self.bias
         )
         decoder = Add()([encoder3, decoder])
         decoder = self._decoder_block(
-            decoder, self.initial_block_filters * 4, output_padding=(0, 1)
+            decoder,
+            self.initial_block_filters * 4,
+            output_padding=(0, 1),
+            bias=self.bias
         )
         decoder = Add()([encoder2, decoder])
         decoder = self._decoder_block(
-            decoder, self.initial_block_filters * 2, output_padding=(0, 1)
+            decoder,
+            self.initial_block_filters * 2,
+            output_padding=(0, 1),
+            bias=self.bias
         )
         decoder = Add()([encoder1, decoder])
         decoder = self._decoder_block(
-            decoder, self.initial_block_filters, output_padding=1
+            decoder,
+            self.initial_block_filters,
+            output_padding=1,
+            bias=self.bias
         )
 
         # Final block
