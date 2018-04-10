@@ -54,20 +54,20 @@ class LinkNet():
 
         """
         # Initial block
-        initial_block = Conv2D(
+        initial_block1 = Conv2D(
             self.initial_block_filters,
             kernel_size=7,
             strides=2,
             padding='same',
             use_bias=self.bias
         )(self.input)
-        initial_block = BatchNormalization()(initial_block)
-        initial_block = Activation('relu')(initial_block)
-        initial_block = MaxPooling2D(pool_size=2)(initial_block)
+        initial_block1 = BatchNormalization()(initial_block1)
+        initial_block1 = Activation('relu')(initial_block1)
+        initial_block2 = MaxPooling2D(pool_size=2)(initial_block1)
 
         # Encoder blocks
         encoder1 = self._encoder_block(
-            initial_block, self.initial_block_filters * 2, bias=self.bias
+            initial_block2, self.initial_block_filters * 2, bias=self.bias
         )
         encoder2 = self._encoder_block(
             encoder1, self.initial_block_filters * 4, bias=self.bias
@@ -83,28 +83,28 @@ class LinkNet():
         decoder = self._decoder_block(
             encoder4,
             self.initial_block_filters * 8,
-            output_padding=(1, 0),
+            output_shape=int_shape(encoder3)[1:],
             bias=self.bias
         )
         decoder = Add()([encoder3, decoder])
         decoder = self._decoder_block(
             decoder,
             self.initial_block_filters * 4,
-            output_padding=(0, 1),
+            output_shape=int_shape(encoder2)[1:],
             bias=self.bias
         )
         decoder = Add()([encoder2, decoder])
         decoder = self._decoder_block(
             decoder,
             self.initial_block_filters * 2,
-            output_padding=(0, 1),
+            output_shape=int_shape(encoder1)[1:],
             bias=self.bias
         )
         decoder = Add()([encoder1, decoder])
         decoder = self._decoder_block(
             decoder,
             self.initial_block_filters,
-            output_padding=1,
+            output_shape=int_shape(initial_block2)[1:],
             bias=self.bias
         )
 
@@ -114,10 +114,9 @@ class LinkNet():
             kernel_size=3,
             strides=2,
             padding='same',
-            output_padding=1,
+            output_shape=int_shape(initial_block1)[1:],
             use_bias=self.bias
         )(decoder)
-        print("decoder5", int_shape(decoder))
         decoder = BatchNormalization()(decoder)
         decoder = Activation('relu')(decoder)
         decoder = Conv2D(
@@ -133,7 +132,7 @@ class LinkNet():
             kernel_size=2,
             strides=2,
             padding='valid',
-            output_padding=0,
+            output_shape=int_shape(self.input)[1:],
             use_bias=self.bias
         )(decoder)
 
@@ -261,7 +260,7 @@ class LinkNet():
         strides=2,
         projection_ratio=4,
         padding='same',
-        output_padding=0,
+        output_shape=None,
         bias=False
     ):
         """Creates a decoder block.
@@ -295,8 +294,8 @@ class LinkNet():
                 transposed convolution layer. Default: 4.
             padding (str, optional): One of "valid" or "same" (case-insensitive).
                 Default: "same".
-            output_padding: An integer or tuple/list of 2 integers specifying
-                the zero-apdding added to one side of the output.
+            output_shape: A tuple of integers specifying the shape of the output
+                without the batch size. Default: None.
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
 
@@ -319,7 +318,7 @@ class LinkNet():
             kernel_size=kernel_size,
             strides=strides,
             padding=padding,
-            output_padding=output_padding,
+            output_shape=output_shape,
             use_bias=bias
         )(x)
         x = BatchNormalization()(x)
