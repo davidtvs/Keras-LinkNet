@@ -1,5 +1,5 @@
-from keras.layers import Conv2D, MaxPooling2D, \
-    BatchNormalization, Activation, Add, Input
+from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, \
+    Activation, Add, Input, Softmax
 from keras.models import Model
 from keras.backend import int_shape, is_keras_tensor
 from .conv2d_transpose import Conv2DTranspose
@@ -36,6 +36,7 @@ class LinkNet():
         self.num_classes = num_classes
         self.initial_block_filters = initial_block_filters
         self.bias = bias
+        self.output_shape = input_shape[:-1] + (num_classes, )
 
         # Create a Keras tensor from the input_shape/input_tensor
         if input_tensor is None:
@@ -109,12 +110,19 @@ class LinkNet():
         )
 
         # Final block
+        # Build the output shape of the next layer - same width and height
+        # as initial_block1
+        shape = (
+            int_shape(initial_block1)[1],
+            int_shape(initial_block1)[2],
+            self.initial_block_filters // 2,
+        )
         decoder = Conv2DTranspose(
             self.initial_block_filters // 2,
             kernel_size=3,
             strides=2,
             padding='same',
-            output_shape=int_shape(initial_block1)[1:],
+            output_shape=shape,
             use_bias=self.bias
         )(decoder)
         decoder = BatchNormalization()(decoder)
@@ -127,14 +135,16 @@ class LinkNet():
         )(decoder)
         decoder = BatchNormalization()(decoder)
         decoder = Activation('relu')(decoder)
-        prediction = Conv2DTranspose(
+        decoder = Conv2DTranspose(
             self.num_classes,
             kernel_size=2,
             strides=2,
             padding='valid',
-            output_shape=int_shape(self.input)[1:],
+            output_shape=self.output_shape,
             use_bias=self.bias
         )(decoder)
+
+        prediction = Softmax()(decoder)
 
         return Model(inputs=self.input, outputs=prediction)
 
@@ -313,12 +323,16 @@ class LinkNet():
         )(input)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
+
+        # The shape of the following trasposed convolution is the output
+        # shape of the block with 'internal_filters' channels
+        shape = output_shape[:-1] + (internal_filters, )
         x = Conv2DTranspose(
             internal_filters,
             kernel_size=kernel_size,
             strides=strides,
             padding=padding,
-            output_shape=output_shape,
+            output_shape=shape,
             use_bias=bias
         )(x)
         x = BatchNormalization()(x)
