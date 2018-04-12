@@ -130,11 +130,16 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     """
     class_count = 0
     total = 0
-    for _, label in dataloader:
-        label = label.cpu().numpy()
+    # Can't do "for _, label in dataloader:" becuase Keras implements __iter__
+    # as an inifinite loop (see https://github.com/keras-team/keras/blob/master/keras/utils/data_utils.py)
+    for i in range(len(dataloader)):
+        # dataloader contains labels in categorical format, convert it to int
+        # format
+        _, label = dataloader[i]
+        label_int = np.argmax(label, axis=-1)
 
         # Flatten label
-        flat_label = label.flatten()
+        flat_label = label_int.flatten()
 
         # Sum up the number of pixels of each class and the total pixel
         # counts for each label
@@ -165,11 +170,16 @@ def median_freq_balancing(dataloader, num_classes):
     """
     class_count = 0
     total = 0
-    for _, label in dataloader:
-        label = label.cpu().numpy()
+    # Can't do "for _, label in dataloader:" becuase Keras implements __iter__
+    # as an inifinite loop (see https://github.com/keras-team/keras/blob/master/keras/utils/data_utils.py)
+    for i in range(len(dataloader)):
+        # dataloader contains labels in categorical format, convert it to int
+        # format
+        _, label = dataloader[i]
+        label_int = np.argmax(label, axis=-1)
 
         # Flatten label
-        flat_label = label.flatten()
+        flat_label = label_int.flatten()
 
         # Sum up the class frequencies
         bincount = np.bincount(flat_label, minlength=num_classes)
