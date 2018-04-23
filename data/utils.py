@@ -12,7 +12,10 @@ def get_files(folder, name_filter=None, extension_filter=None):
             this substring in their filename. Default: None; files are not
             filtered.
         extension_filter (string, optional): The desired file extension.
-            Default: None; files are not filtered
+            Default: None; files are not filtered.
+
+    Returns:
+        The list of files.
 
     """
     if not os.path.isdir(folder):
@@ -59,7 +62,8 @@ def pil_loader(data_path, label_path, shape):
         shape (tuple): The requested size in pixels, as a 2-tuple:
             (width,height). If set to ``None``, resizing is not performed.
 
-    Returns the image and the label as PIL images.
+    Returns:
+        The image and the label as PIL images.
 
     """
     data = Image.open(data_path)
@@ -85,6 +89,9 @@ def remap(image, old_values, new_values):
         old_values (tuple): A tuple of values to be replaced.
         new_values (tuple): A tuple of new values to replace ``old_values``.
 
+    Returns:
+        The remapped image of the same type as `image`
+
     """
     assert isinstance(image, Image.Image) or isinstance(
         image, np.ndarray
@@ -100,14 +107,19 @@ def remap(image, old_values, new_values):
         image = np.array(image)
 
     # Replace old values by the new ones
-    tmp = np.zeros_like(image)
+    remapped_img = np.zeros_like(image)
     for old, new in zip(old_values, new_values):
         # Since tmp is already initialized as zeros we can skip new values
         # equal to 0
         if new != 0:
-            tmp[image == old] = new
+            remapped_img[image == old] = new
 
-    return Image.fromarray(tmp)
+    # If the input is a PIL image return as a PIL.Image too, else return
+    # numpy array
+    if isinstance(image, Image.Image):
+        remapped_img = Image.fromarray(remapped_img)
+
+    return remapped_img
 
 
 def enet_weighing(dataloader, num_classes, c=1.02):
@@ -121,11 +133,14 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     References: https://arxiv.org/abs/1606.02147
 
     Args:
-        dataloader (utils.Sequence): A data loader to iterate over the
+        dataloader (keras.utils.Sequence): A data loader to iterate over the
             dataset.
         num_classes (int): The number of classes.
         c (int, optional): AN additional hyper-parameter which restricts
             the interval of values for the weights. Default: 1.02.
+
+    Returns:
+        The class weights as a ndarray of ints.
 
     """
     class_count = 0
@@ -164,8 +179,12 @@ def median_freq_balancing(dataloader, num_classes):
     References: https://arxiv.org/abs/1411.4734
 
     Args:
-        dataloader (iterable): Any iterable type to iterate over the dataset.
+        dataloader (keras.utils.Sequence): A data loader to iterate over the
+            dataset.
         num_classes (int): The number of classes
+
+    Returns:
+        The class weights as a ndarray of ints.
 
     """
     class_count = 0
