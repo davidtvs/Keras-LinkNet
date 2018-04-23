@@ -5,6 +5,7 @@ from keras.callbacks import LearningRateScheduler
 
 from args import get_arguments
 from data.utils import enet_weighing, median_freq_balancing
+from metrics.miou import MeanIoU
 
 if __name__ == '__main__':
     args = get_arguments()
@@ -61,15 +62,19 @@ if __name__ == '__main__':
     # Compile the model
     # Optimizer: Adam
     optim = Adam(args.learning_rate)
+
+    # Initialize mIoU metric
+    miou_metric = MeanIoU(num_classes)
+
     # Loss: Categorical crossentropy loss
     model.compile(
         optimizer=optim,
         loss='categorical_crossentropy',
-        metrics=[metrics.categorical_accuracy]
+        metrics=[metrics.categorical_accuracy, miou_metric.mean_iou]
     )
 
     # Set up learining rate scheduler
-    def _lr_decay(epoch, learning_rate):
+    def _lr_decay(epoch, lr):
         return args.lr_decay**(epoch // args.lr_decay_epochs) * args.learning_rate
     lr_scheduler = LearningRateScheduler(_lr_decay)
 
