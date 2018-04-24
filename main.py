@@ -1,3 +1,5 @@
+import os
+
 from models.linknet import LinkNet
 from keras import metrics
 from keras.optimizers import Adam
@@ -21,22 +23,27 @@ if __name__ == '__main__':
 
     # Initialize the dataset generator
     train_generator = DataGenerator(
-        args.dataset_dir, batch_size=args.batch_size
+        args.dataset_dir, batch_size=args.batch_size, mode='train'
+    )
+    val_generator = DataGenerator(
+        args.dataset_dir, batch_size=args.batch_size, mode='val'
     )
 
     # Some information about the dataset
     image_batch, label_batch = train_generator[0]
     num_classes = label_batch[0].shape[-1]
-    print("Training dataset size: {}".format(len(train_generator)))
-    print("Image size {}".format(image_batch.shape))
-    print("Label size {}".format(label_batch.shape))
-    print("Number of classes (including unlabelled) {}".format(num_classes))
+    print("--> Training dataset size: {}".format(len(train_generator)))
+    print("--> Image size {}".format(image_batch.shape))
+    print("--> Label size {}".format(label_batch.shape))
+    print(
+        "--> Number of classes (including unlabelled) {}".format(num_classes)
+    )
 
     # Compute class weights if needed
-    print("Weighing technique: {}".format(args.weighing))
+    print("--> Weighing technique: {}".format(args.weighing))
     if (args.weighing is not None):
-        print("Computing class weights...")
-        print("(this can take a while depending on the dataset size)")
+        print("--> Computing class weights...")
+        print("--> (this can take a while depending on the dataset size)")
         if args.weighing.lower() == 'enet':
             class_weights = enet_weighing(train_generator, num_classes)
         elif args.weighing.lower() == 'mfb':
@@ -53,19 +60,19 @@ if __name__ == '__main__':
             if args.dataset.lower() == 'camvid':
                 class_weights[-1] = 0
 
-    print("Class weights: {}".format(class_weights))
+    print("--> Class weights: {}".format(class_weights))
 
     # Create the model
     model = LinkNet(num_classes, input_shape=image_batch[0].shape).get_model()
     print(model.summary())
 
-    # Compile the model
     # Optimizer: Adam
     optim = Adam(args.learning_rate)
 
     # Initialize mIoU metric
     miou_metric = MeanIoU(num_classes)
 
+    # Compile the model
     # Loss: Categorical crossentropy loss
     model.compile(
         optimizer=optim,
@@ -75,7 +82,8 @@ if __name__ == '__main__':
 
     # Set up learining rate scheduler
     def _lr_decay(epoch, lr):
-        return args.lr_decay**(epoch // args.lr_decay_epochs) * args.learning_rate
+        return args.lr_decay ** (epoch // args.lr_decay_epochs) * args.learning_rate  # yapf: disable
+
     lr_scheduler = LearningRateScheduler(_lr_decay)
 
     # Train the model
@@ -85,5 +93,10 @@ if __name__ == '__main__':
         epochs=args.epochs,
         callbacks=[lr_scheduler],
         workers=args.workers,
-        verbose=args.verbose
+        verbose=args.verbose,
+        validation_data=val_generator
     )
+
+    save_path = os.path.join(args.save_dir, args.name + '.h5')
+    print("--> Saving model in: {}".format(save_path))
+    model.save(save_path)

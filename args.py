@@ -107,4 +107,16 @@ def get_arguments():
         )
     )
 
+    # Storage settings
+    parser.add_argument(
+        "--name",
+        type=str,
+        default='LinkNet',
+        help="Name given to the model when saving. Default: LinkNet")
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default='checkpoints',
+        help="The directory where models are saved. Default: checkpoints")
+
     return parser.parse_args()
