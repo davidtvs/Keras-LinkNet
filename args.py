@@ -12,10 +12,22 @@ def get_arguments():
         choices=['train'],
         default='train',
         help=(
-            "train: performs training and validation; test: tests the model "
-            "found in \"--save_dir\" with name \"--name\" on \"--dataset\"; "
-            "full: combines train and test modes. Default: train"
+            "train: performs training and validation. Default: train"
         )
+    )
+    parser.add_argument(
+        "--resume",
+        type=bool,
+        default=False,
+        help="If set to true, the model found in \"--save_dir\" with name "
+        "\"--name\" is loaded and training is resumed from the epoch it was "
+        "saved in. Default: False"
+    )
+    parser.add_argument(
+        "--initial_epoch",
+        type=int,
+        default=0,
+        help="Epoch at which to start training. Default: 0"
     )
 
     # Hyperparameters
@@ -112,11 +124,13 @@ def get_arguments():
         "--name",
         type=str,
         default='LinkNet',
-        help="Name given to the model when saving. Default: LinkNet")
+        help="Name given to the model when saving. Default: LinkNet"
+    )
     parser.add_argument(
-        "--save_dir",
+        "--checkpoint_dir",
         type=str,
         default='checkpoints',
-        help="The directory where models are saved. Default: checkpoints")
+        help="The directory where models are saved. Default: checkpoints"
+    )
 
     return parser.parse_args()

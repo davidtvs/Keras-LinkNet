@@ -127,7 +127,7 @@ class Conv2DTranspose(Conv2D):
             **kwargs
         )
         self.input_spec = InputSpec(ndim=4)
-        self._output_shape = output_shape
+        self._output_shape = tuple(output_shape)
 
     def build(self, input_shape):
         if len(input_shape) != 4:
@@ -239,4 +239,5 @@ class Conv2DTranspose(Conv2D):
     def get_config(self):
         config = super(Conv2DTranspose, self).get_config()
         config.pop('dilation_rate')
+        config['output_shape'] = self._output_shape
         return config

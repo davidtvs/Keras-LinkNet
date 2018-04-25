@@ -1,18 +1,81 @@
 import os
 
-from models.linknet import LinkNet
 from keras import metrics
+from keras.models import load_model
 from keras.optimizers import Adam
 from keras.callbacks import LearningRateScheduler
 
 from args import get_arguments
-from data.utils import enet_weighing, median_freq_balancing
+from models.linknet import LinkNet
+from models.conv2d_transpose import Conv2DTranspose
 from metrics.miou import MeanIoU
+from data.utils import enet_weighing, median_freq_balancing
 
-if __name__ == '__main__':
+
+def train(
+    epochs,
+    initial_epoch,
+    train_generator,
+    val_generator,
+    class_weights,
+    learning_rate,
+    lr_decay,
+    lr_decay_epochs,
+    workers,
+    verbose,
+    checkpoint_model=None,
+):
+    # Create the model
+    image_batch, label_batch = train_generator[0]
+    num_classes = label_batch[0].shape[-1]
+    input_shape = image_batch[0].shape
+    if checkpoint_model is None:
+        model = LinkNet(num_classes, input_shape=input_shape).get_model()
+    else:
+        model = checkpoint_model
+
+    print(model.summary())
+
+    # Optimizer: Adam
+    optim = Adam(learning_rate)
+
+    # Initialize mIoU metric
+    miou_metric = MeanIoU(num_classes)
+
+    # Compile the model
+    # Loss: Categorical crossentropy loss
+    model.compile(
+        optimizer=optim,
+        loss='categorical_crossentropy',
+        metrics=[metrics.categorical_accuracy, miou_metric.mean_iou]
+    )
+
+    # Set up learining rate scheduler
+    def _lr_decay(epoch, lr):
+        return lr_decay**(epoch // lr_decay_epochs) * learning_rate
+
+    lr_scheduler = LearningRateScheduler(_lr_decay)
+
+    # Train the model
+    model.fit_generator(
+        train_generator,
+        class_weight=class_weights,
+        epochs=epochs,
+        initial_epoch=initial_epoch,
+        callbacks=[lr_scheduler],
+        workers=workers,
+        verbose=verbose,
+        validation_data=val_generator
+    )
+
+    return model
+
+
+def main():
+    # Get command line arguments
     args = get_arguments()
 
-    # Import the requested dataset
+    # Import the desired dataset generator
     if args.dataset.lower() == 'camvid':
         from data import CamVidGenerator as DataGenerator
     else:
@@ -21,23 +84,25 @@ if __name__ == '__main__':
             "\"{0}\" is not a supported dataset.".format(args.dataset)
         )
 
-    # Initialize the dataset generator
-    train_generator = DataGenerator(
-        args.dataset_dir, batch_size=args.batch_size, mode='train'
-    )
-    val_generator = DataGenerator(
-        args.dataset_dir, batch_size=args.batch_size, mode='val'
-    )
+    if args.mode.lower() == 'train':
+        train_generator = DataGenerator(
+            args.dataset_dir, batch_size=args.batch_size, mode='train'
+        )
+        val_generator = DataGenerator(
+            args.dataset_dir, batch_size=args.batch_size, mode='val'
+        )
 
-    # Some information about the dataset
-    image_batch, label_batch = train_generator[0]
-    num_classes = label_batch[0].shape[-1]
-    print("--> Training dataset size: {}".format(len(train_generator)))
-    print("--> Image size {}".format(image_batch.shape))
-    print("--> Label size {}".format(label_batch.shape))
-    print(
-        "--> Number of classes (including unlabelled) {}".format(num_classes)
-    )
+        # Some information about the dataset
+        image_batch, label_batch = train_generator[0]
+        num_classes = label_batch[0].shape[-1]
+        print("--> Training batches: {}".format(len(train_generator)))
+        print("--> Validation batches: {}".format(len(val_generator)))
+        print("--> Image size: {}".format(image_batch.shape))
+        print("--> Label size: {}".format(label_batch.shape))
+        print(
+            "--> No. of classes (including unlabelled): {}".
+            format(num_classes)
+        )
 
     # Compute class weights if needed
     print("--> Weighing technique: {}".format(args.weighing))
@@ -62,41 +127,37 @@ if __name__ == '__main__':
 
     print("--> Class weights: {}".format(class_weights))
 
-    # Create the model
-    model = LinkNet(num_classes, input_shape=image_batch[0].shape).get_model()
-    print(model.summary())
+    checkpoint_path = os.path.join(args.checkpoint_dir, args.name + '.h5')
+    print("--> Checkpoint path: {}".format(checkpoint_path))
 
-    # Optimizer: Adam
-    optim = Adam(args.learning_rate)
+    model = None
+    if args.resume:
+        print("--> Resuming model: {}".format(checkpoint_path))
+        model = load_model(
+            checkpoint_path,
+            custom_objects={
+                'Conv2DTranspose': Conv2DTranspose,
+                'mean_iou': MeanIoU(num_classes).mean_iou
+            }
+        )
 
-    # Initialize mIoU metric
-    miou_metric = MeanIoU(num_classes)
+    if args.mode.lower() == 'train':
+        model = train(
+            args.epochs,
+            args.initial_epoch,
+            train_generator,
+            val_generator,
+            class_weights,
+            args.learning_rate,
+            args.lr_decay,
+            args.lr_decay_epochs,
+            args.workers,
+            args.verbose,
+            checkpoint_model=model,
+        )
+        print("--> Saving model in: {}".format(checkpoint_path))
+        model.save(checkpoint_path)
 
-    # Compile the model
-    # Loss: Categorical crossentropy loss
-    model.compile(
-        optimizer=optim,
-        loss='categorical_crossentropy',
-        metrics=[metrics.categorical_accuracy, miou_metric.mean_iou]
-    )
 
-    # Set up learining rate scheduler
-    def _lr_decay(epoch, lr):
-        return args.lr_decay ** (epoch // args.lr_decay_epochs) * args.learning_rate  # yapf: disable
-
-    lr_scheduler = LearningRateScheduler(_lr_decay)
-
-    # Train the model
-    model.fit_generator(
-        train_generator,
-        class_weight=class_weights,
-        epochs=args.epochs,
-        callbacks=[lr_scheduler],
-        workers=args.workers,
-        verbose=args.verbose,
-        validation_data=val_generator
-    )
-
-    save_path = os.path.join(args.save_dir, args.name + '.h5')
-    print("--> Saving model in: {}".format(save_path))
-    model.save(save_path)
+if __name__ == '__main__':
+    main()
