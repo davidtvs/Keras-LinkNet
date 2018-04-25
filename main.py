@@ -65,8 +65,24 @@ def train(
         callbacks=[lr_scheduler],
         workers=workers,
         verbose=verbose,
+        use_multiprocessing=True,
         validation_data=val_generator
     )
+
+    return model
+
+
+def test(model, test_generator, workers, verbose):
+    metrics = model.evaluate_generator(
+        test_generator,
+        workers=workers,
+        use_multiprocessing=True,
+        verbose=verbose,
+    )
+
+    print("--> Evaluation metrics")
+    for idx, value in enumerate(metrics):
+        print("{0}: {1}".format(model.metrics_names[idx], value))
 
     return model
 
@@ -84,7 +100,8 @@ def main():
             "\"{0}\" is not a supported dataset.".format(args.dataset)
         )
 
-    if args.mode.lower() == 'train':
+    # Initialize training and validation dataloaders
+    if args.mode.lower() in ('train', 'full'):
         train_generator = DataGenerator(
             args.dataset_dir, batch_size=args.batch_size, mode='train'
         )
@@ -104,28 +121,47 @@ def main():
             format(num_classes)
         )
 
-    # Compute class weights if needed
-    print("--> Weighing technique: {}".format(args.weighing))
-    if (args.weighing is not None):
-        print("--> Computing class weights...")
-        print("--> (this can take a while depending on the dataset size)")
-        if args.weighing.lower() == 'enet':
-            class_weights = enet_weighing(train_generator, num_classes)
-        elif args.weighing.lower() == 'mfb':
-            class_weights = median_freq_balancing(train_generator, num_classes)
+        # Compute class weights if needed
+        print("--> Weighing technique: {}".format(args.weighing))
+        if (args.weighing is not None):
+            print("--> Computing class weights...")
+            print("--> (this can take a while depending on the dataset size)")
+            if args.weighing.lower() == 'enet':
+                class_weights = enet_weighing(train_generator, num_classes)
+            elif args.weighing.lower() == 'mfb':
+                class_weights = median_freq_balancing(
+                    train_generator, num_classes
+                )
+            else:
+                class_weights = None
         else:
             class_weights = None
-    else:
-        class_weights = None
 
-    # Set the unlabelled class weight to 0 if requested
-    if class_weights is not None:
-        # Handle unlabelled class
-        if args.ignore_unlabelled:
-            if args.dataset.lower() == 'camvid':
-                class_weights[-1] = 0
+        # Set the unlabelled class weight to 0 if requested
+        if class_weights is not None:
+            # Handle unlabelled class
+            if args.ignore_unlabelled:
+                if args.dataset.lower() == 'camvid':
+                    class_weights[-1] = 0
 
-    print("--> Class weights: {}".format(class_weights))
+        print("--> Class weights: {}".format(class_weights))
+
+    # Initialize test dataloader
+    if args.mode.lower() in ('test', 'full'):
+        test_generator = DataGenerator(
+            args.dataset_dir, batch_size=args.batch_size, mode='test'
+        )
+
+        # Some information about the dataset
+        image_batch, label_batch = test_generator[0]
+        num_classes = label_batch[0].shape[-1]
+        print("--> Testing batches: {}".format(len(test_generator)))
+        print("--> Image size: {}".format(image_batch.shape))
+        print("--> Label size: {}".format(label_batch.shape))
+        print(
+            "--> No. of classes (including unlabelled): {}".
+            format(num_classes)
+        )
 
     checkpoint_path = os.path.join(args.checkpoint_dir, args.name + '.h5')
     print("--> Checkpoint path: {}".format(checkpoint_path))
@@ -141,7 +177,7 @@ def main():
             }
         )
 
-    if args.mode.lower() == 'train':
+    if args.mode.lower() in ('train', 'full'):
         model = train(
             args.epochs,
             args.initial_epoch,
@@ -155,8 +191,13 @@ def main():
             args.verbose,
             checkpoint_model=model,
         )
+
         print("--> Saving model in: {}".format(checkpoint_path))
         model.save(checkpoint_path)
+
+    if args.mode.lower() in ('test', 'full'):
+        assert model is not None, "model is not defined"
+        model = test(model, test_generator, args.workers, args.verbose)
 
 
 if __name__ == '__main__':
