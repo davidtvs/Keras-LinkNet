@@ -70,7 +70,7 @@ def get_arguments():
     # Dataset
     parser.add_argument(
         "--dataset",
-        choices=['camvid'],
+        choices=['camvid', 'cityscapes'],
         default='camvid',
         help="Dataset to use. Default: camvid"
     )

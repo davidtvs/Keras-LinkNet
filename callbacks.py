@@ -5,13 +5,7 @@ import utils
 
 
 class TensorBoardPrediction(Callback):
-    def __init__(
-        self,
-        generator,
-        class_to_rgb,
-        log_dir,
-        batch_index=0,
-    ):
+    def __init__(self, generator, class_to_rgb, log_dir, batch_index=0):
         super().__init__()
 
         self.generator = generator

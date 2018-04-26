@@ -112,6 +112,8 @@ def main():
     # Import the desired dataset generator
     if args.dataset.lower() == 'camvid':
         from data import CamVidGenerator as DataGenerator
+    elif args.dataset.lower() == 'cityscapes':
+        from data import CityscapesGenerator as DataGenerator
     else:
         # Should never happen...but just in case it does
         raise RuntimeError(
