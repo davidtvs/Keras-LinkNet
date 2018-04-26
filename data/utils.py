@@ -142,6 +142,10 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     Returns:
         The class weights as a ndarray of ints.
 
+    Todo:
+        * Find an alternative to np.argmax, it's too slow. Maybe go though
+            each channel and sum the ones. That will give us the bincount.
+
     """
     class_count = 0
     total = 0
@@ -185,6 +189,10 @@ def median_freq_balancing(dataloader, num_classes):
 
     Returns:
         The class weights as a ndarray of ints.
+
+    Todo:
+        * Find an alternative to np.argmax, it's too slow. Maybe go though
+            each channel and sum the ones. That will give us the bincount.
 
     """
     class_count = 0
