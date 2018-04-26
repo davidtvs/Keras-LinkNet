@@ -3,13 +3,14 @@ import os
 from keras import metrics
 from keras.models import load_model
 from keras.optimizers import Adam
-from keras.callbacks import LearningRateScheduler
+from keras.callbacks import LearningRateScheduler, TensorBoard
 
 from args import get_arguments
 from models.linknet import LinkNet
 from models.conv2d_transpose import Conv2DTranspose
 from metrics.miou import MeanIoU
 from data.utils import enet_weighing, median_freq_balancing
+from callbacks import TensorBoardPrediction
 
 
 def train(
@@ -23,7 +24,8 @@ def train(
     lr_decay_epochs,
     workers,
     verbose,
-    checkpoint_model=None,
+    tensorboard_logdir='./checkpoints',
+    checkpoint_model=None
 ):
     # Create the model
     image_batch, label_batch = train_generator[0]
@@ -56,13 +58,29 @@ def train(
 
     lr_scheduler = LearningRateScheduler(_lr_decay)
 
+    # TensorBoard callback
+    tensorboard = TensorBoard(
+        log_dir=tensorboard_logdir,
+        histogram_freq=0,
+        write_graph=True,
+        write_images=True
+    )
+
+    # Tensorboard callback that displays a random sample with respective
+    # target and prediction
+    tensorboard_viz = TensorBoardPrediction(
+        val_generator,
+        val_generator.color_encoding,
+        log_dir=tensorboard_logdir
+    )
+
     # Train the model
     model.fit_generator(
         train_generator,
         class_weight=class_weights,
         epochs=epochs,
         initial_epoch=initial_epoch,
-        callbacks=[lr_scheduler],
+        callbacks=[lr_scheduler, tensorboard, tensorboard_viz],
         workers=workers,
         verbose=verbose,
         use_multiprocessing=True,
@@ -189,7 +207,8 @@ def main():
             args.lr_decay_epochs,
             args.workers,
             args.verbose,
-            checkpoint_model=model,
+            tensorboard_logdir=args.checkpoint_dir,
+            checkpoint_model=model
         )
 
         print("--> Saving model in: {}".format(checkpoint_path))
