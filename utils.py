@@ -50,7 +50,8 @@ def categorical_to_rgb(categorical_batch, class_to_rgb):
             categorical_batch.shape[1],
             categorical_batch.shape[2],
             3,
-        )
+        ),
+        dtype=np.uint8
     )
     for idx in range(categorical_batch.shape[0]):
         image = np.argmax(categorical_batch[idx], axis=-1).squeeze()

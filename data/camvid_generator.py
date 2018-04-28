@@ -153,13 +153,17 @@ class CamVidGenerator(Sequence):
 
             # Initialize image_batch and label_batch if needed
             if image_batch is None:
-                image_batch = np.empty((self.batch_size, ) + image.shape)
+                image_batch = np.empty(
+                    (self.batch_size, ) + image.shape, dtype=np.uint8
+                )
             if label_batch is None:
-                label_batch = np.empty((self.batch_size, ) + label.shape)
+                label_batch = np.empty(
+                    (self.batch_size, ) + label.shape, dtype=np.uint8
+                )
 
             # Fill image_batch and label_batch iteratively
-            image_batch[idx] = image
-            label_batch[idx] = label
+            image_batch[idx] = image.astype(np.uint8)
+            label_batch[idx] = label.astype(np.uint8)
 
         return image_batch, label_batch
 
