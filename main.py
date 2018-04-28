@@ -183,7 +183,9 @@ def main():
             format(num_classes)
         )
 
-    checkpoint_path = os.path.join(args.checkpoint_dir, args.name + '.h5')
+    checkpoint_path = os.path.join(
+        args.checkpoint_dir, args.name, args.name + '.h5'
+    )
     print("--> Checkpoint path: {}".format(checkpoint_path))
 
     model = None
@@ -198,6 +200,7 @@ def main():
         )
 
     if args.mode.lower() in ('train', 'full'):
+        tensorboard_logdir = os.path.join(args.checkpoint_dir, args.name)
         model = train(
             args.epochs,
             args.initial_epoch,
@@ -209,7 +212,7 @@ def main():
             args.lr_decay_epochs,
             args.workers,
             args.verbose,
-            tensorboard_logdir=args.checkpoint_dir,
+            tensorboard_logdir=tensorboard_logdir,
             checkpoint_model=model
         )
 
