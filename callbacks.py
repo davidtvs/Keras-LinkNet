@@ -1,6 +1,8 @@
+from io import BytesIO
 import numpy as np
 import tensorflow as tf
 from keras.callbacks import Callback
+import matplotlib.pyplot as plt
 import utils
 
 
@@ -28,10 +30,12 @@ class TensorBoardPrediction(Callback):
         self.generator = generator
         self.class_to_rgb = class_to_rgb
         self.batch_index = batch_index
-        self.log_dir = log_dir
         self.max_outputs = max_outputs
-        self.sess = None
-        self.summary_op = None
+        self.log_dir = log_dir
+
+    def set_model(self, model):
+        super().set_model(model)
+        self.writer = tf.summary.FileWriter(self.log_dir)
 
     def on_epoch_end(self, epoch, logs=None):
         """Creates and updates the event files.
@@ -50,29 +54,54 @@ class TensorBoardPrediction(Callback):
         y_true = utils.categorical_to_rgb(y_true, self.class_to_rgb)
         y_pred = utils.categorical_to_rgb(y_pred, self.class_to_rgb)
 
-        if self.sess is None:
-            self.sess = tf.keras.backend.get_session()
+        batch_summary = self.image_summary(sample, 'sample')
+        batch_summary += self.image_summary(y_true, 'target')
+        batch_summary += self.image_summary(y_pred, 'prediction')
+        summary = tf.Summary(value=batch_summary)
 
-            # Create a summary to monitor the sample, target and prediction
-            tf.summary.image(
-                'samples',
-                tf.convert_to_tensor(sample),
-                max_outputs=self.max_outputs
-            )
-            tf.summary.image(
-                'targets',
-                tf.convert_to_tensor(y_true),
-                max_outputs=self.max_outputs
-            )
-            tf.summary.image(
-                'predictions',
-                tf.convert_to_tensor(y_pred),
-                max_outputs=self.max_outputs
-            )
-            self.summary_op = tf.summary.merge_all()
+        # Write the summaries to the file
+        self.writer.add_summary(summary, epoch)
+        self.writer.flush()
 
-        # Add the summaries; the summary op must be evaluated first to get the
-        # tf.Summary protocol buffer
-        writer = tf.summary.FileWriter(self.log_dir)
-        writer.add_summary(self.summary_op.eval(session=self.sess), epoch)
-        writer.close()
+    def on_train_end(self, _):
+        self.writer.close()
+
+    def image_summary(self, batch, tag):
+        assert batch.shape[-1] == 3, (
+            "expected image with 3 channels got {}".format(batch.shape[-1])
+        )
+
+        # If batch is actually just a single image with 3 dimensions give it
+        # a batch dimension equal to 1
+        if np.ndim(batch) == 3:
+            batch = np.expand_dims(batch, 0)
+
+        # Dimensions
+        batch_size, height, width, channels = batch.shape
+
+        summary_list = []
+        for idx in range(0, self.max_outputs):
+            image = batch[idx]
+
+            # We need the images in encoded format (bytes); to get that we
+            # must save it to a byte stream...
+            image_io = BytesIO()
+            plt.imsave(image_io, image, format='png')
+
+            # ...and get its contents after
+            image_string_io = image_io.getvalue()
+            image_io.close()
+
+            # Create and append the summary to the list
+            image_summary = tf.Summary.Image(
+                height=height,
+                width=width,
+                colorspace=channels,
+                encoded_image_string=image_string_io
+            )
+            image_tag = "{0}/{1}".format(tag, idx + 1)
+            summary_list.append(
+                tf.Summary.Value(tag=image_tag, image=image_summary)
+            )
+
+        return summary_list
