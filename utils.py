@@ -15,6 +15,8 @@ def imshow_batch(image_batch, nrows=1):
             columns is infered from the rows and the batch size.
 
     """
+    assert nrows > 0, "number of rows must be greater than 0"
+
     if (np.ndim(image_batch) == 3):
         image_batch = np.expand_dims(image_batch, 0)
 
@@ -24,7 +26,12 @@ def imshow_batch(image_batch, nrows=1):
     # Show the images with subplot
     fig, axes = plt.subplots(nrows, ncols)
     for idx in range(image_batch.shape[0]):
-        axes[idx].imshow(image_batch[idx].astype(int))
+        if nrows == 1:
+            axes[idx].imshow(image_batch[idx].astype(int))
+        else:
+            col = idx % ncols
+            row = idx // ncols
+            axes[row, col].imshow(image_batch[idx].astype(int))
 
     plt.show()
 
