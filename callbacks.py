@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from keras.callbacks import Callback
 import matplotlib.pyplot as plt
-import utils
+from data.utils import categorical_to_rgb
 
 
 class TensorBoardPrediction(Callback):
@@ -51,8 +51,8 @@ class TensorBoardPrediction(Callback):
         y_pred = np.asarray(self.model.predict_on_batch(sample))
 
         # Convert y_true and y_pred from categorical to RGB images
-        y_true = utils.categorical_to_rgb(y_true, self.class_to_rgb)
-        y_pred = utils.categorical_to_rgb(y_pred, self.class_to_rgb)
+        y_true = categorical_to_rgb(y_true, self.class_to_rgb)
+        y_pred = categorical_to_rgb(y_pred, self.class_to_rgb)
 
         batch_summary = self.image_summary(sample, 'sample')
         batch_summary += self.image_summary(y_true, 'target')

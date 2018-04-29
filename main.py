@@ -49,7 +49,7 @@ def train(
     model.compile(
         optimizer=optim,
         loss='categorical_crossentropy',
-        metrics=[metrics.categorical_accuracy, miou_metric.mean_iou]
+        metrics=['accuracy', miou_metric.mean_iou]
     )
 
     # Set up learining rate scheduler
