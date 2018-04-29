@@ -60,53 +60,78 @@ class LinkNet():
             kernel_size=7,
             strides=2,
             padding='same',
-            use_bias=self.bias
+            use_bias=self.bias,
+            name='initial_block/conv2d_1'
         )(self.input)
-        initial_block1 = BatchNormalization()(initial_block1)
-        initial_block1 = Activation('relu')(initial_block1)
-        initial_block2 = MaxPooling2D(pool_size=2)(initial_block1)
+        initial_block1 = BatchNormalization(name='initial_block/bn_1'
+                                            )(initial_block1)
+        initial_block1 = Activation(
+            'relu', name='initial_block/relu_1'
+        )(initial_block1)
+        initial_block2 = MaxPooling2D(
+            pool_size=2, name='initial_block/maxpool'
+        )(initial_block1)
 
         # Encoder blocks
         encoder1 = self._encoder_block(
-            initial_block2, self.initial_block_filters * 2, bias=self.bias
+            initial_block2,
+            self.initial_block_filters * 2,
+            bias=self.bias,
+            name='encoder1'
         )
         encoder2 = self._encoder_block(
-            encoder1, self.initial_block_filters * 4, bias=self.bias
+            encoder1,
+            self.initial_block_filters * 4,
+            bias=self.bias,
+            name='encoder2'
         )
         encoder3 = self._encoder_block(
-            encoder2, self.initial_block_filters * 8, bias=self.bias
+            encoder2,
+            self.initial_block_filters * 8,
+            bias=self.bias,
+            name='encoder3'
         )
         encoder4 = self._encoder_block(
-            encoder3, self.initial_block_filters * 16, bias=self.bias
+            encoder3,
+            self.initial_block_filters * 16,
+            bias=self.bias,
+            name='encoder4'
         )
 
         # Decoder blocks
-        decoder = self._decoder_block(
+        decoder4 = self._decoder_block(
             encoder4,
             self.initial_block_filters * 8,
             output_shape=int_shape(encoder3)[1:],
-            bias=self.bias
+            bias=self.bias,
+            name='decoder4'
         )
-        decoder = Add()([encoder3, decoder])
-        decoder = self._decoder_block(
-            decoder,
+        decoder4 = Add(name='shortcut_e3_d4')([encoder3, decoder4])
+
+        decoder3 = self._decoder_block(
+            decoder4,
             self.initial_block_filters * 4,
             output_shape=int_shape(encoder2)[1:],
-            bias=self.bias
+            bias=self.bias,
+            name='decoder3'
         )
-        decoder = Add()([encoder2, decoder])
-        decoder = self._decoder_block(
-            decoder,
+        decoder3 = Add(name='shortcut_e2_d3')([encoder2, decoder3])
+
+        decoder2 = self._decoder_block(
+            decoder3,
             self.initial_block_filters * 2,
             output_shape=int_shape(encoder1)[1:],
-            bias=self.bias
+            bias=self.bias,
+            name='decoder2'
         )
-        decoder = Add()([encoder1, decoder])
-        decoder = self._decoder_block(
-            decoder,
+        decoder2 = Add(name='shortcut_e1_d2')([encoder1, decoder2])
+
+        decoder1 = self._decoder_block(
+            decoder2,
             self.initial_block_filters,
             output_shape=int_shape(initial_block2)[1:],
-            bias=self.bias
+            bias=self.bias,
+            name='decoder1'
         )
 
         # Final block
@@ -117,34 +142,39 @@ class LinkNet():
             int_shape(initial_block1)[2],
             self.initial_block_filters // 2,
         )
-        decoder = Conv2DTranspose(
+        final_block = Conv2DTranspose(
             self.initial_block_filters // 2,
             kernel_size=3,
             strides=2,
             padding='same',
             output_shape=shape,
-            use_bias=self.bias
-        )(decoder)
-        decoder = BatchNormalization()(decoder)
-        decoder = Activation('relu')(decoder)
-        decoder = Conv2D(
+            use_bias=self.bias,
+            name='final_block/transposed2d_1'
+        )(decoder1)
+        final_block = BatchNormalization(name='final_block/bn_1')(final_block)
+        final_block = Activation('relu', name='final_block/relu_1')(final_block)
+
+        final_block = Conv2D(
             self.initial_block_filters // 2,
             kernel_size=3,
             padding='same',
-            use_bias=self.bias
-        )(decoder)
-        decoder = BatchNormalization()(decoder)
-        decoder = Activation('relu')(decoder)
-        decoder = Conv2DTranspose(
+            use_bias=self.bias,
+            name='final_block/conv2d_1'
+        )(final_block)
+        final_block = BatchNormalization(name='final_block/bn_2')(final_block)
+        final_block = Activation('relu', name='final_block/relu_2')(final_block)
+
+        logits = Conv2DTranspose(
             self.num_classes,
             kernel_size=2,
             strides=2,
-            padding='valid',
+            padding='same',
             output_shape=self.output_shape,
-            use_bias=self.bias
-        )(decoder)
+            use_bias=self.bias,
+            name='final_block/transposed2d_2'
+        )(final_block)
 
-        prediction = Softmax()(decoder)
+        prediction = Softmax(name='final_block/softmax')(logits)
 
         return Model(inputs=self.input, outputs=prediction)
 
@@ -155,6 +185,7 @@ class LinkNet():
         kernel_size=3,
         padding='same',
         bias=False,
+        name=None
     ):
         """Creates an encoder block.
 
@@ -178,13 +209,17 @@ class LinkNet():
             The output tensor of the block.
 
         """
+        if name is None:
+            name = ''
+
         x = self._encoder_basic_block(
             input,
             out_filters,
             kernel_size=kernel_size,
             strides=2,
             padding=padding,
-            bias=bias
+            bias=bias,
+            name=name + '/basic_1'
         )
 
         x = self._encoder_basic_block(
@@ -193,7 +228,8 @@ class LinkNet():
             kernel_size=kernel_size,
             strides=1,
             padding=padding,
-            bias=bias
+            bias=bias,
+            name=name + '/basic_2'
         )
 
         return x
@@ -205,7 +241,8 @@ class LinkNet():
         kernel_size=3,
         strides=1,
         padding='same',
-        bias=False
+        bias=False,
+        name=None
     ):
         """Creates a basic encoder block.
 
@@ -213,9 +250,12 @@ class LinkNet():
         1. Conv2D
         2. BatchNormalization
         3. ReLU
+        4. Conv2D
+        5. BatchNormalization
         Residual branch architecture:
         1. Conv2D, if `strides` is greater than 1
-        The output of the main and residual branches are summed.
+        The output of the main and residual branches are then added together
+        with ReLU activation.
 
         Args:
             input (tensor): A tensor or variable.
@@ -237,6 +277,9 @@ class LinkNet():
             The output tensor of the block.
 
         """
+        if name is None:
+            name = ''
+
         residual = input
 
         x = Conv2D(
@@ -244,10 +287,21 @@ class LinkNet():
             kernel_size=kernel_size,
             strides=strides,
             padding=padding,
-            use_bias=bias
+            use_bias=bias,
+            name=name + '/main/conv2d_1'
         )(input)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = BatchNormalization(name=name + '/main/bn_1')(x)
+        x = Activation('relu', name=name + '/main/relu_1')(x)
+
+        x = Conv2D(
+            out_filters,
+            kernel_size=kernel_size,
+            strides=1,
+            padding=padding,
+            use_bias=bias,
+            name=name + '/main/conv2d_2'
+        )(x)
+        x = BatchNormalization(name=name + '/main/bn_2')(x)
 
         if strides > 1:
             residual = Conv2D(
@@ -255,10 +309,13 @@ class LinkNet():
                 kernel_size=1,
                 strides=strides,
                 padding=padding,
-                use_bias=bias
+                use_bias=bias,
+                name=name + '/res/conv2d_1'
             )(residual)
+            residual = BatchNormalization(name=name + '/res/bn_1')(residual)
 
-        x = Add()([x, residual])
+        x = Add(name=name + '/add')([x, residual])
+        x = Activation('relu', name=name + '/relu_1')(x)
 
         return x
 
@@ -271,7 +328,8 @@ class LinkNet():
         projection_ratio=4,
         padding='same',
         output_shape=None,
-        bias=False
+        bias=False,
+        name=None
     ):
         """Creates a decoder block.
 
@@ -313,16 +371,20 @@ class LinkNet():
             The output tensor of the block.
 
         """
+        if name is None:
+            name = ''
+
         internal_filters = int_shape(input)[-1] // projection_ratio
         x = Conv2D(
             internal_filters,
             kernel_size=1,
             strides=1,
             padding=padding,
-            use_bias=bias
+            use_bias=bias,
+            name=name + '/conv2d_1'
         )(input)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = BatchNormalization(name=name + '/bn_1')(x)
+        x = Activation('relu', name=name + '/relu_1')(x)
 
         # The shape of the following trasposed convolution is the output
         # shape of the block with 'internal_filters' channels
@@ -333,18 +395,21 @@ class LinkNet():
             strides=strides,
             padding=padding,
             output_shape=shape,
-            use_bias=bias
+            use_bias=bias,
+            name=name + '/transposed2d_1'
         )(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = BatchNormalization(name=name + '/bn_2')(x)
+        x = Activation('relu', name=name + '/relu_2')(x)
+
         x = Conv2D(
             out_filters,
             kernel_size=1,
             strides=1,
             padding=padding,
-            use_bias=bias
+            use_bias=bias,
+            name=name + '/conv2d_2'
         )(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
+        x = BatchNormalization(name=name + '/bn_3')(x)
+        x = Activation('relu', name=name + '/relu_3')(x)
 
         return x
