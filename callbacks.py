@@ -79,6 +79,9 @@ class TensorBoardPrediction(Callback):
         # Dimensions
         batch_size, height, width, channels = batch.shape
 
+        if self.max_outputs > batch_size:
+            self.max_outputs = batch_size
+
         summary_list = []
         for idx in range(0, self.max_outputs):
             image = batch[idx]
