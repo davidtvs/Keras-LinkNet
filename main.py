@@ -163,6 +163,8 @@ def main():
             if args.ignore_unlabelled:
                 if args.dataset.lower() == 'camvid':
                     class_weights[-1] = 0
+                elif args.dataset.lower() == 'cityscapes':
+                    class_weights[0] = 0
 
         print("--> Class weights: {}".format(class_weights))
 
