@@ -51,8 +51,8 @@ class MeanIoU(object):
         # Compute the confusion matrix to get the number of true positives,
         # false positives, and false negatives
         # Convert predictions and target from categorical to integer format
-        target = np.argmax(y_true, axis=-1).flatten()
-        predicted = np.argmax(y_pred, axis=-1).flatten()
+        target = np.argmax(y_true, axis=-1).ravel()
+        predicted = np.argmax(y_pred, axis=-1).ravel()
 
         # Trick for bincounting 2 arrays together
         x = predicted + self.num_classes * target
