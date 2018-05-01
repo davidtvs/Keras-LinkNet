@@ -257,9 +257,6 @@ def median_freq_balancing(dataloader, num_classes):
     Returns:
         The class weights as a ndarray of ints.
 
-    Todo:
-        * Find an alternative to np.argmax, it's computationally expensive.
-
     """
     class_count = 0
     total = 0
