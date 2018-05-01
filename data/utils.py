@@ -209,28 +209,28 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     Returns:
         The class weights as a ndarray of ints.
 
-    Todo:
-        * Find an alternative to np.argmax, it's too slow. Maybe go though
-            each channel and sum the ones. That will give us the bincount.
-
     """
     class_count = 0
     total = 0
     # Can't do "for _, label in dataloader:" becuase Keras implements __iter__
     # as an inifinite loop (see https://github.com/keras-team/keras/blob/master/keras/utils/data_utils.py)
     for i in range(len(dataloader)):
-        # dataloader contains labels in categorical format, convert it to int
-        # format
+        # dataloader should contain labels in categorical format, but lets
+        # handle both categorical and int formats
         _, label = dataloader[i]
-        label_int = np.argmax(label, axis=-1)
 
-        # Flatten label
-        flat_label = label_int.flatten()
+        # int format
+        if label.shape[-1] == 1:
+            count = np.bincount(label.flatten(), minlength=num_classes)
+        # Categorical format
+        else:
+            label_reshape = label.reshape(-1, num_classes)
+            count = np.sum(label_reshape, axis=0)
 
         # Sum up the number of pixels of each class and the total pixel
         # counts for each label
-        class_count += np.bincount(flat_label, minlength=num_classes)
-        total += flat_label.size
+        class_count += count
+        total += label.shape[0] * label.shape[1] * label.shape[2]
 
     # Compute propensity score and then the weights for each class
     propensity_score = class_count / total
@@ -258,8 +258,7 @@ def median_freq_balancing(dataloader, num_classes):
         The class weights as a ndarray of ints.
 
     Todo:
-        * Find an alternative to np.argmax, it's too slow. Maybe go though
-            each channel and sum the ones. That will give us the bincount.
+        * Find an alternative to np.argmax, it's computationally expensive.
 
     """
     class_count = 0
@@ -267,30 +266,33 @@ def median_freq_balancing(dataloader, num_classes):
     # Can't do "for _, label in dataloader:" becuase Keras implements __iter__
     # as an inifinite loop (see https://github.com/keras-team/keras/blob/master/keras/utils/data_utils.py)
     for i in range(len(dataloader)):
-        # dataloader contains labels in categorical format, convert it to int
-        # format
+        # dataloader should contain labels in categorical format, but lets
+        # handle both categorical and int formats
         _, label = dataloader[i]
-        label_int = np.argmax(label, axis=-1)
 
-        # Flatten label
-        flat_label = label_int.flatten()
-
-        # Sum up the class frequencies
-        bincount = np.bincount(flat_label, minlength=num_classes)
+        # int format
+        if label.shape[-1] == 1:
+            count = np.bincount(label.flatten(), minlength=num_classes)
+        # Categorical format
+        else:
+            label_reshape = label.reshape(-1, num_classes)
+            count = np.sum(label_reshape, axis=0)
 
         # Create of mask of classes that exist in the label
-        mask = bincount > 0
+        mask = count > 0
         # Multiply the mask by the pixel count. The resulting array has
         # one element for each class. The value is either 0 (if the class
         # does not exist in the label) or equal to the pixel count (if
         # the class exists in the label)
-        total += mask * flat_label.size
+        size = label.shape[0] * label.shape[1] * label.shape[2]
+        total += mask * size
 
         # Sum up the number of pixels found for each class
-        class_count += bincount
+        class_count += count
 
     # Compute the frequency and its median
     freq = class_count / total
     med = np.median(freq)
 
     return med / freq
+

@@ -1,6 +1,5 @@
 import os
 
-from keras import metrics
 from keras.models import load_model
 from keras.optimizers import Adam
 from keras.callbacks import LearningRateScheduler, TensorBoard
