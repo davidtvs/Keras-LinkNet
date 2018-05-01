@@ -2,7 +2,8 @@ import os
 
 from keras.models import load_model
 from keras.optimizers import Adam
-from keras.callbacks import LearningRateScheduler, TensorBoard
+from keras.callbacks import LearningRateScheduler, TensorBoard, \
+    ModelCheckpoint, EarlyStopping
 
 from args import get_arguments
 from models.linknet import LinkNet
@@ -23,6 +24,7 @@ def train(
     lr_decay_epochs,
     workers,
     verbose,
+    checkpoint_path,
     tensorboard_logdir='./checkpoints',
     checkpoint_model=None
 ):
@@ -73,13 +75,30 @@ def train(
         log_dir=tensorboard_logdir
     )
 
+    # Checkpoint callback - save the best model
+    checkpoint = ModelCheckpoint(
+        checkpoint_path,
+        monitor='val_mean_iou',
+        save_best_only=True,
+        mode='max'
+    )
+
+    # Early stopping
+    early_stop = EarlyStopping(
+        monitor='val_mean_iou', min_delta=0.01, patience=10, mode='max'
+    )
+
+    callbacks = [
+        lr_scheduler, tensorboard, tensorboard_viz, checkpoint, early_stop
+    ]
+
     # Train the model
     model.fit_generator(
         train_generator,
         class_weight=class_weights,
         epochs=epochs,
         initial_epoch=initial_epoch,
-        callbacks=[lr_scheduler, tensorboard, tensorboard_viz],
+        callbacks=callbacks,
         workers=workers,
         verbose=verbose,
         use_multiprocessing=True,
@@ -213,12 +232,10 @@ def main():
             args.lr_decay_epochs,
             args.workers,
             args.verbose,
+            checkpoint_path,
             tensorboard_logdir=tensorboard_logdir,
             checkpoint_model=model
         )
-
-        print("--> Saving model in: {}".format(checkpoint_path))
-        model.save(checkpoint_path)
 
     if args.mode.lower() in ('test', 'full'):
         assert model is not None, "model is not defined"
