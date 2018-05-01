@@ -34,17 +34,18 @@ class TensorBoardPrediction(Callback):
         self.log_dir = log_dir
 
     def set_model(self, model):
+        """Creates a FileWriter to write the TensorBoard event file."""
         super().set_model(model)
         self.writer = tf.summary.FileWriter(self.log_dir)
 
-    def on_epoch_end(self, epoch, logs=None):
-        """Creates and updates the event files.
+    def on_epoch_end(self, epoch, _):
+        """Updates the TensorBoard event file with images.
+
+        Computes the current model prediction on a batch and adds the
+        sample, target, and prediction images to TensorBoard.
 
         Args:
             epoch (int): Current epoch.
-            logs (dict): Includes training accuracy and loss, and, if
-                validation is enabled, validation accuracy and loss.
-                Default: None.
 
         """
         sample, y_true = self.generator[self.batch_index]
@@ -64,9 +65,23 @@ class TensorBoardPrediction(Callback):
         self.writer.flush()
 
     def on_train_end(self, _):
+        """Close the TensorBoard FileWriter."""
         self.writer.close()
 
     def image_summary(self, batch, tag):
+        """Constructs a list of image summaries for a batch of images.
+
+        Args:
+            batch (numpy.ndarray): A batch of images to generate TensorBaord
+                summaries for.
+            tag (string): The name to identify the images. In TensorBoard,
+                tags are often organized by scope (which contains slashes
+                to convey hierarchy).
+
+        Returns:
+            A list of TensorBoard summaries with images.
+
+        """
         assert batch.shape[-1] == 3, (
             "expected image with 3 channels got {}".format(batch.shape[-1])
         )
