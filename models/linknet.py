@@ -106,6 +106,7 @@ class LinkNet():
         decoder4 = self._decoder_block(
             encoder4,
             self.initial_block_filters * 4,
+            strides=2,
             output_shape=int_shape(encoder3)[1:],
             bias=self.bias,
             name='decoder4'
@@ -115,6 +116,7 @@ class LinkNet():
         decoder3 = self._decoder_block(
             decoder4,
             self.initial_block_filters * 2,
+            strides=2,
             output_shape=int_shape(encoder2)[1:],
             bias=self.bias,
             name='decoder3'
@@ -124,6 +126,7 @@ class LinkNet():
         decoder2 = self._decoder_block(
             decoder3,
             self.initial_block_filters,
+            strides=2,
             output_shape=int_shape(encoder1)[1:],
             bias=self.bias,
             name='decoder2'
@@ -133,10 +136,12 @@ class LinkNet():
         decoder1 = self._decoder_block(
             decoder2,
             self.initial_block_filters,
+            strides=1,
             output_shape=int_shape(initial_block2)[1:],
             bias=self.bias,
             name='decoder1'
         )
+        decoder2 = Add(name='shortcut_init_d1')([initial_block2, decoder1])
 
         # Final block
         # Build the output shape of the next layer - same width and height
