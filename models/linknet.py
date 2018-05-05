@@ -69,31 +69,35 @@ class LinkNet():
             'relu', name='initial_block/relu_1'
         )(initial_block1)
         initial_block2 = MaxPooling2D(
-            pool_size=2, name='initial_block/maxpool'
+            pool_size=2, name='initial_block/maxpool_1'
         )(initial_block1)
 
         # Encoder blocks
         encoder1 = self._encoder_block(
             initial_block2,
-            self.initial_block_filters * 2,
+            self.initial_block_filters,
+            strides=1,
             bias=self.bias,
             name='encoder1'
         )
         encoder2 = self._encoder_block(
             encoder1,
-            self.initial_block_filters * 4,
+            self.initial_block_filters * 2,
+            strides=(2, 1),
             bias=self.bias,
             name='encoder2'
         )
         encoder3 = self._encoder_block(
             encoder2,
-            self.initial_block_filters * 8,
+            self.initial_block_filters * 4,
+            strides=(2, 1),
             bias=self.bias,
             name='encoder3'
         )
         encoder4 = self._encoder_block(
             encoder3,
-            self.initial_block_filters * 16,
+            self.initial_block_filters * 8,
+            strides=(2, 1),
             bias=self.bias,
             name='encoder4'
         )
@@ -101,7 +105,7 @@ class LinkNet():
         # Decoder blocks
         decoder4 = self._decoder_block(
             encoder4,
-            self.initial_block_filters * 8,
+            self.initial_block_filters * 4,
             output_shape=int_shape(encoder3)[1:],
             bias=self.bias,
             name='decoder4'
@@ -110,7 +114,7 @@ class LinkNet():
 
         decoder3 = self._decoder_block(
             decoder4,
-            self.initial_block_filters * 4,
+            self.initial_block_filters * 2,
             output_shape=int_shape(encoder2)[1:],
             bias=self.bias,
             name='decoder3'
@@ -119,7 +123,7 @@ class LinkNet():
 
         decoder2 = self._decoder_block(
             decoder3,
-            self.initial_block_filters * 2,
+            self.initial_block_filters,
             output_shape=int_shape(encoder1)[1:],
             bias=self.bias,
             name='decoder2'
@@ -152,7 +156,9 @@ class LinkNet():
             name='final_block/transposed2d_1'
         )(decoder1)
         final_block = BatchNormalization(name='final_block/bn_1')(final_block)
-        final_block = Activation('relu', name='final_block/relu_1')(final_block)
+        final_block = Activation(
+            'relu', name='final_block/relu_1'
+        )(final_block)
 
         final_block = Conv2D(
             self.initial_block_filters // 2,
@@ -162,7 +168,9 @@ class LinkNet():
             name='final_block/conv2d_1'
         )(final_block)
         final_block = BatchNormalization(name='final_block/bn_2')(final_block)
-        final_block = Activation('relu', name='final_block/relu_2')(final_block)
+        final_block = Activation(
+            'relu', name='final_block/relu_2'
+        )(final_block)
 
         logits = Conv2DTranspose(
             self.num_classes,
@@ -183,6 +191,7 @@ class LinkNet():
         input,
         out_filters,
         kernel_size=3,
+        strides=1,
         padding='same',
         bias=False,
         name=None
@@ -196,14 +205,20 @@ class LinkNet():
         Args:
             input (tensor): A tensor or variable.
             out_filters (int): The number of filters in the block output.
-            kernel_size (int, tuple, list, optional): A tuple/list of 2
+            kernel_size (int, tuple, or list, optional): A tuple/list of 2
                 integers, specifying the height and width of the 2D kernel
                 window. In case it's a single integer, it's value is used
                 for all spatial dimensions. Default: 3.
+            strides (int, tuple, or list, optional): A tuple/list of two
+                integers, specifying the stride for each basic block. A
+                single integer can also be specified, in which case both
+                basic blocks use the same stride. Default: 1.
             padding (str, optional): One of "valid" or "same" (case-insensitive).
                 Default: "same".
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
+            name (string, optional): A string to identify this block.
+                Default: None (empty string is used).
 
         Returns:
             The output tensor of the block.
@@ -212,11 +227,23 @@ class LinkNet():
         if name is None:
             name = ''
 
+        assert isinstance(strides, (int, tuple, list)), (
+            "expected int, tuple, or list for strides"
+        )
+        if (isinstance(strides, (tuple, list))):
+            if len(strides) == 2:
+                stride_1, stride_2 = strides
+            else:
+                raise ValueError("expected a list or tuple on length 2")
+        else:
+            stride_1 = strides
+            stride_2 = strides
+
         x = self._encoder_basic_block(
             input,
             out_filters,
             kernel_size=kernel_size,
-            strides=2,
+            strides=stride_1,
             padding=padding,
             bias=bias,
             name=name + '/basic_1'
@@ -226,7 +253,7 @@ class LinkNet():
             x,
             out_filters,
             kernel_size=kernel_size,
-            strides=1,
+            strides=stride_2,
             padding=padding,
             bias=bias,
             name=name + '/basic_2'
@@ -272,6 +299,8 @@ class LinkNet():
                 Default: "same".
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
+            name (string, optional): A string to identify this block.
+                Default: None (empty string is used).
 
         Returns:
             The output tensor of the block.
@@ -366,6 +395,8 @@ class LinkNet():
                 without the batch size. Default: None.
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
+            name (string, optional): A string to identify this block.
+                Default: None (empty string is used).
 
         Returns:
             The output tensor of the block.
