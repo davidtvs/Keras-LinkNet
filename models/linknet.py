@@ -76,7 +76,14 @@ class LinkNet():
         return Model(inputs=self.input, outputs=decoder_out, name=self.name)
 
     def get_encoder(self, name='encoder'):
-        """
+        """Builds the encoder of a LinkNet architecture.
+
+        Args:
+            name (string, optional): The encoder model name.
+                Default: 'encoder'.
+
+        Returns:
+            The encoder as a Keras model instance.
 
         """
         # Initial block
@@ -287,7 +294,14 @@ class LinkNet():
         return x
 
     def get_decoder(self, inputs, name='decoder'):
-        """
+        """Builds the decoder of a LinkNet architecture.
+
+        Args:
+            name (string, optional): The encoder model name.
+                Default: 'decoder'.
+
+        Returns:
+            The decoder as a Keras model instance.
 
         """
         # Decoder inputs
