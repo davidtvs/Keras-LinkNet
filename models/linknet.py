@@ -1,6 +1,6 @@
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, \
     Activation, Add, Input, Softmax
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.backend import int_shape, is_keras_tensor
 from .conv2d_transpose import Conv2DTranspose
 
@@ -31,7 +31,8 @@ class LinkNet():
         input_tensor=None,
         input_shape=None,
         initial_block_filters=64,
-        bias=False
+        bias=False,
+        name='linknet'
     ):
         self.num_classes = num_classes
         self.initial_block_filters = initial_block_filters
@@ -40,158 +41,96 @@ class LinkNet():
 
         # Create a Keras tensor from the input_shape/input_tensor
         if input_tensor is None:
-            self.input = Input(shape=input_shape)
+            self.input = Input(shape=input_shape, name='input_img')
         elif is_keras_tensor(input_tensor):
             self.input = input_tensor
         else:
             # input_tensor is a tensor but not one from Keras
-            self.input = Input(tensor=input_tensor, shape=input_shape)
+            self.input = Input(
+                tensor=input_tensor, shape=input_shape, name='input_img'
+            )
 
-    def get_model(self):
+        self.name = name
+
+    def get_model(
+        self,
+        pretrained_encoder=True,
+        weights_path='./checkpoints/linknet_encoder_weights.h5'
+    ):
         """Initializes a LinkNet model.
 
         Returns:
             A Keras model instance.
 
         """
+        # Build encoder
+        encoder_model = self.get_encoder()
+        if pretrained_encoder:
+            encoder_model.load_weights(weights_path)
+        encoder_out = encoder_model(self.input)
+
+        # Build decoder
+        decoder_model = self.get_decoder(encoder_out)
+        decoder_out = decoder_model(encoder_out)
+
+        return Model(inputs=self.input, outputs=decoder_out, name=self.name)
+
+    def get_encoder(self, name='encoder'):
+        """
+
+        """
         # Initial block
-        initial_block1 = Conv2D(
+        initial1 = Conv2D(
             self.initial_block_filters,
             kernel_size=7,
             strides=2,
             padding='same',
             use_bias=self.bias,
-            name='initial_block/conv2d_1'
+            name=name + '/0/conv2d_1'
         )(self.input)
-        initial_block1 = BatchNormalization(name='initial_block/bn_1'
-                                            )(initial_block1)
-        initial_block1 = Activation(
-            'relu', name='initial_block/relu_1'
-        )(initial_block1)
-        initial_block2 = MaxPooling2D(
-            pool_size=2, name='initial_block/maxpool_1'
-        )(initial_block1)
+        initial1 = BatchNormalization(name=name + '/0/bn_1')(initial1)
+        initial1 = Activation('relu', name=name + '/0/relu_1')(initial1)
+        initial2 = MaxPooling2D(pool_size=2, name=name + '/0/maxpool_1')(initial1)  # yapf: disable
 
         # Encoder blocks
-        encoder1 = self._encoder_block(
-            initial_block2,
+        encoder1 = self.encoder_block(
+            initial2,
             self.initial_block_filters,
             strides=1,
             bias=self.bias,
-            name='encoder1'
+            name=name + '/1'
         )
-        encoder2 = self._encoder_block(
+        encoder2 = self.encoder_block(
             encoder1,
             self.initial_block_filters * 2,
             strides=(2, 1),
             bias=self.bias,
-            name='encoder2'
+            name=name + '/2'
         )
-        encoder3 = self._encoder_block(
+        encoder3 = self.encoder_block(
             encoder2,
             self.initial_block_filters * 4,
             strides=(2, 1),
             bias=self.bias,
-            name='encoder3'
+            name=name + '/3'
         )
-        encoder4 = self._encoder_block(
+        encoder4 = self.encoder_block(
             encoder3,
             self.initial_block_filters * 8,
             strides=(2, 1),
             bias=self.bias,
-            name='encoder4'
+            name=name + '/4'
         )
 
-        # Decoder blocks
-        decoder4 = self._decoder_block(
-            encoder4,
-            self.initial_block_filters * 4,
-            strides=2,
-            output_shape=int_shape(encoder3)[1:],
-            bias=self.bias,
-            name='decoder4'
+        return Model(
+            inputs=self.input,
+            outputs=[
+                encoder4, encoder3, encoder2, encoder1, initial2, initial1
+            ],
+            name=name
         )
-        decoder4 = Add(name='shortcut_e3_d4')([encoder3, decoder4])
 
-        decoder3 = self._decoder_block(
-            decoder4,
-            self.initial_block_filters * 2,
-            strides=2,
-            output_shape=int_shape(encoder2)[1:],
-            bias=self.bias,
-            name='decoder3'
-        )
-        decoder3 = Add(name='shortcut_e2_d3')([encoder2, decoder3])
-
-        decoder2 = self._decoder_block(
-            decoder3,
-            self.initial_block_filters,
-            strides=2,
-            output_shape=int_shape(encoder1)[1:],
-            bias=self.bias,
-            name='decoder2'
-        )
-        decoder2 = Add(name='shortcut_e1_d2')([encoder1, decoder2])
-
-        decoder1 = self._decoder_block(
-            decoder2,
-            self.initial_block_filters,
-            strides=1,
-            output_shape=int_shape(initial_block2)[1:],
-            bias=self.bias,
-            name='decoder1'
-        )
-        decoder2 = Add(name='shortcut_init_d1')([initial_block2, decoder1])
-
-        # Final block
-        # Build the output shape of the next layer - same width and height
-        # as initial_block1
-        shape = (
-            int_shape(initial_block1)[1],
-            int_shape(initial_block1)[2],
-            self.initial_block_filters // 2,
-        )
-        final_block = Conv2DTranspose(
-            self.initial_block_filters // 2,
-            kernel_size=3,
-            strides=2,
-            padding='same',
-            output_shape=shape,
-            use_bias=self.bias,
-            name='final_block/transposed2d_1'
-        )(decoder1)
-        final_block = BatchNormalization(name='final_block/bn_1')(final_block)
-        final_block = Activation(
-            'relu', name='final_block/relu_1'
-        )(final_block)
-
-        final_block = Conv2D(
-            self.initial_block_filters // 2,
-            kernel_size=3,
-            padding='same',
-            use_bias=self.bias,
-            name='final_block/conv2d_1'
-        )(final_block)
-        final_block = BatchNormalization(name='final_block/bn_2')(final_block)
-        final_block = Activation(
-            'relu', name='final_block/relu_2'
-        )(final_block)
-
-        logits = Conv2DTranspose(
-            self.num_classes,
-            kernel_size=2,
-            strides=2,
-            padding='same',
-            output_shape=self.output_shape,
-            use_bias=self.bias,
-            name='final_block/transposed2d_2'
-        )(final_block)
-
-        prediction = Softmax(name='final_block/softmax')(logits)
-
-        return Model(inputs=self.input, outputs=prediction)
-
-    def _encoder_block(
+    def encoder_block(
         self,
         input,
         out_filters,
@@ -199,12 +138,12 @@ class LinkNet():
         strides=1,
         padding='same',
         bias=False,
-        name=None
+        name=''
     ):
         """Creates an encoder block.
 
         The encoder block is a combination of two basic encoder blocks
-        (see ``_encoder_basic_block``). The first with stride 2 and the
+        (see ``encoder_basic_block``). The first with stride 2 and the
         the second with stride 1.
 
         Args:
@@ -223,18 +162,15 @@ class LinkNet():
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
             name (string, optional): A string to identify this block.
-                Default: None (empty string is used).
+                Default: Empty string.
 
         Returns:
             The output tensor of the block.
 
         """
-        if name is None:
-            name = ''
-
         assert isinstance(strides, (int, tuple, list)), (
             "expected int, tuple, or list for strides"
-        )
+        )  # yapf: disable
         if (isinstance(strides, (tuple, list))):
             if len(strides) == 2:
                 stride_1, stride_2 = strides
@@ -244,29 +180,29 @@ class LinkNet():
             stride_1 = strides
             stride_2 = strides
 
-        x = self._encoder_basic_block(
+        x = self.encoder_basic_block(
             input,
             out_filters,
             kernel_size=kernel_size,
             strides=stride_1,
             padding=padding,
             bias=bias,
-            name=name + '/basic_1'
+            name=name + '/1'
         )
 
-        x = self._encoder_basic_block(
+        x = self.encoder_basic_block(
             x,
             out_filters,
             kernel_size=kernel_size,
             strides=stride_2,
             padding=padding,
             bias=bias,
-            name=name + '/basic_2'
+            name=name + '/2'
         )
 
         return x
 
-    def _encoder_basic_block(
+    def encoder_basic_block(
         self,
         input,
         out_filters,
@@ -274,7 +210,7 @@ class LinkNet():
         strides=1,
         padding='same',
         bias=False,
-        name=None
+        name=''
     ):
         """Creates a basic encoder block.
 
@@ -305,15 +241,12 @@ class LinkNet():
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
             name (string, optional): A string to identify this block.
-                Default: None (empty string is used).
+                Default: Empty string.
 
         Returns:
             The output tensor of the block.
 
         """
-        if name is None:
-            name = ''
-
         residual = input
 
         x = Conv2D(
@@ -353,7 +286,110 @@ class LinkNet():
 
         return x
 
-    def _decoder_block(
+    def get_decoder(self, inputs, name='decoder'):
+        """
+
+        """
+        # Decoder inputs
+        encoder4 = Input(shape=int_shape(inputs[0])[1:], name='encoder4')
+        encoder3 = Input(shape=int_shape(inputs[1])[1:], name='encoder3')
+        encoder2 = Input(shape=int_shape(inputs[2])[1:], name='encoder2')
+        encoder1 = Input(shape=int_shape(inputs[3])[1:], name='encoder1')
+        initial2 = Input(shape=int_shape(inputs[4])[1:], name='initial2')
+        initial1 = Input(shape=int_shape(inputs[5])[1:], name='initial1')
+
+        # Decoder blocks
+        decoder4 = self.decoder_block(
+            encoder4,
+            self.initial_block_filters * 4,
+            strides=2,
+            output_shape=int_shape(encoder3)[1:],
+            bias=self.bias,
+            name=name + '/4'
+        )
+        decoder4 = Add(name=name + '/shortcut_e3_d4')([encoder3, decoder4])
+
+        decoder3 = self.decoder_block(
+            decoder4,
+            self.initial_block_filters * 2,
+            strides=2,
+            output_shape=int_shape(encoder2)[1:],
+            bias=self.bias,
+            name=name + '/3'
+        )
+        decoder3 = Add(name=name + '/shortcut_e2_d3')([encoder2, decoder3])
+
+        decoder2 = self.decoder_block(
+            decoder3,
+            self.initial_block_filters,
+            strides=2,
+            output_shape=int_shape(encoder1)[1:],
+            bias=self.bias,
+            name=name + '/2'
+        )
+        decoder2 = Add(name=name + '/shortcut_e1_d2')([encoder1, decoder2])
+
+        decoder1 = self.decoder_block(
+            decoder2,
+            self.initial_block_filters,
+            strides=1,
+            output_shape=int_shape(initial2)[1:],
+            bias=self.bias,
+            name=name + '/1'
+        )
+        decoder2 = Add(name=name + '/shortcut_init_d1')([initial2, decoder1])
+
+        # Final block
+        # Build the output shape of the next layer - same width and height
+        # as initial1
+        shape = (
+            int_shape(initial1)[1],
+            int_shape(initial1)[2],
+            self.initial_block_filters // 2,
+        )
+        final = Conv2DTranspose(
+            self.initial_block_filters // 2,
+            kernel_size=3,
+            strides=2,
+            padding='same',
+            output_shape=shape,
+            use_bias=self.bias,
+            name=name + '/0/transposed2d_1'
+        )(decoder1)
+        final = BatchNormalization(name=name + '/0/bn_1')(final)
+        final = Activation('relu', name=name + '/0/relu_1')(final)
+
+        final = Conv2D(
+            self.initial_block_filters // 2,
+            kernel_size=3,
+            padding='same',
+            use_bias=self.bias,
+            name=name + '/0/conv2d_1'
+        )(final)
+        final = BatchNormalization(name=name + '/0/bn_2')(final)
+        final = Activation('relu', name=name + '/0/relu_2')(final)
+
+        logits = Conv2DTranspose(
+            self.num_classes,
+            kernel_size=2,
+            strides=2,
+            padding='same',
+            output_shape=self.output_shape,
+            use_bias=self.bias,
+            name=name + '/0/transposed2d_2'
+        )(final)
+
+        prediction = Softmax(name=name + '/0/softmax')(logits)
+
+        return Model(
+            inputs=[
+                encoder4, encoder3, encoder2, encoder1, initial2, initial1
+            ],
+            outputs=prediction,
+            name=name
+        )
+
+    def decoder_block(
         self,
         input,
         out_filters,
@@ -363,7 +399,7 @@ class LinkNet():
         padding='same',
         output_shape=None,
         bias=False,
-        name=None
+        name=''
     ):
         """Creates a decoder block.
 
@@ -401,15 +437,12 @@ class LinkNet():
             bias (bool, optional): If ``True``, adds a learnable bias.
                 Default: ``False``.
             name (string, optional): A string to identify this block.
-                Default: None (empty string is used).
+                Default: Empty string.
 
         Returns:
             The output tensor of the block.
 
         """
-        if name is None:
-            name = ''
-
         internal_filters = int_shape(input)[-1] // projection_ratio
         x = Conv2D(
             internal_filters,

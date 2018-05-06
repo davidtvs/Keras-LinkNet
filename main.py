@@ -33,7 +33,8 @@ def train(
     num_classes = label_batch[0].shape[-1]
     input_shape = image_batch[0].shape
     if checkpoint_model is None:
-        model = LinkNet(num_classes, input_shape=input_shape).get_model()
+        model = LinkNet(num_classes, input_shape=input_shape)
+        model = model.get_model()
     else:
         model = checkpoint_model
 
