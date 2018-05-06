@@ -22,11 +22,13 @@ def train(
     learning_rate,
     lr_decay,
     lr_decay_epochs,
-    workers,
-    verbose,
-    checkpoint_path,
-    tensorboard_logdir='./checkpoints',
-    checkpoint_model=None
+    pretrained_encoder='True',
+    weights_path='./checkpoints/linknet_encoder_weights.h5',
+    checkpoint_model=None,
+    verbose=1,
+    workers=1,
+    checkpoint_path='./checkpoints',
+    tensorboard_logdir='./checkpoints'
 ):
     # Create the model
     image_batch, label_batch = train_generator[0]
@@ -34,7 +36,9 @@ def train(
     input_shape = image_batch[0].shape
     if checkpoint_model is None:
         model = LinkNet(num_classes, input_shape=input_shape)
-        model = model.get_model()
+        model = model.get_model(
+            pretrained_encoder=pretrained_encoder, weights_path=weights_path
+        )
     else:
         model = checkpoint_model
 
@@ -231,11 +235,13 @@ def main():
             args.learning_rate,
             args.lr_decay,
             args.lr_decay_epochs,
-            args.workers,
-            args.verbose,
-            checkpoint_path,
+            pretrained_encoder=args.pretrained_encoder,
+            weights_path=args.weights_path,
+            checkpoint_model=model,
+            verbose=args.verbose,
+            workers=args.workers,
+            checkpoint_path=checkpoint_path,
             tensorboard_logdir=tensorboard_logdir,
-            checkpoint_model=model
         )
 
     if args.mode.lower() in ('test', 'full'):

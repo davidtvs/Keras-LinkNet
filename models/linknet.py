@@ -1,6 +1,6 @@
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, \
     Activation, Add, Input, Softmax
-from keras.models import Model, load_model
+from keras.models import Model
 from keras.backend import int_shape, is_keras_tensor
 from .conv2d_transpose import Conv2DTranspose
 

@@ -42,7 +42,7 @@ def get_arguments():
     parser.add_argument(
         "--weights_path",
         type=str,
-        default="/checkpoints/linknet_encoder_weights.h5",
+        default="./checkpoints/linknet_encoder_weights.h5",
         help=(
             "HDF5 file where the weights are stored. This setting is ignored "
             "if \"--pretrained_encoder\" is set to False. Default: "
