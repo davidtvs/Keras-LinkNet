@@ -11,23 +11,43 @@ def get_arguments():
         "-m",
         choices=['train', 'test', 'full'],
         default='train',
-        help="train: performs training and validation; test: tests the model "
-        "found in \"--save_dir\" with name \"--name\" on \"--dataset\"; "
-        "full: combines train and test modes. Default: train"
+        help=(
+            "train: performs training and validation; test: tests the model "
+            "found in \"--save_dir\" with name \"--name\" on \"--dataset\"; "
+            "full: combines train and test modes. Default: train"
+        )
     )
     parser.add_argument(
         "--resume",
         type=bool,
         default=False,
-        help="If set to true, the model found in \"--save_dir\" with name "
-        "\"--name\" is loaded and training is resumed from the epoch it was "
-        "saved in. Default: False"
+        help=(
+            "If set to true, the model found in \"--save_dir\" with name "
+            "\"--name\" is loaded and training is resumed from the epoch it "
+            "was saved in. Default: False"
+        )
     )
     parser.add_argument(
         "--initial_epoch",
         type=int,
         default=0,
         help="Epoch at which to start training. Default: 0"
+    )
+    parser.add_argument(
+        "--pretrained_encoder",
+        type=bool,
+        default=True,
+        help="Whether to load pretrained encoder weights or not. Default: True"
+    )
+    parser.add_argument(
+        "--weights_path",
+        type=str,
+        default="/checkpoints/linknet_encoder_weights.h5",
+        help=(
+            "HDF5 file where the weights are stored. This setting is ignored "
+            "if \"--pretrained_encoder\" is set to False. Default: "
+            "/checkpoints/linknet_encoder_weights.h5"
+        )
     )
 
     # Hyperparameters
