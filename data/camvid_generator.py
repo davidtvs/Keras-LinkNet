@@ -215,6 +215,12 @@ class CamVidGenerator(Sequence):
             image = np.asarray(image)
             label = np.asarray(label)
 
+            # Expand the channels dimension if there isn't one
+            if np.ndim(image) == 2:
+                image = np.expand_dims(image, -1)
+            if np.ndim(label) == 2:
+                label = np.expand_dims(label, -1)
+
             # Initialize image_batch and label_batch if needed
             if image_batch is None:
                 image_batch = np.empty(

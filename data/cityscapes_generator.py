@@ -47,26 +47,26 @@ class CityscapesGenerator(Sequence):
 
     # Default encoding for pixel value, class name, and class color
     color_encoding = OrderedDict([
-        ('unlabeled', (0, 0, 0)),
-        ('road', (128, 64, 128)),
-        ('sidewalk', (244, 35, 232)),
-        ('building', (70, 70, 70)),
-        ('wall', (102, 102, 156)),
-        ('fence', (190, 153, 153)),
-        ('pole', (153, 153, 153)),
-        ('traffic_light', (250, 170, 30)),
-        ('traffic_sign', (220, 220, 0)),
-        ('vegetation', (107, 142, 35)),
-        ('terrain', (152, 251, 152)),
-        ('sky', (70, 130, 180)),
-        ('person', (220, 20, 60)),
-        ('rider', (255, 0, 0)),
-        ('car', (0, 0, 142)),
-        ('truck', (0, 0, 70)),
-        ('bus', (0, 60, 100)),
-        ('train', (0, 80, 100)),
-        ('motorcycle', (0, 0, 230)),
-        ('bicycle', (119, 11, 32))
+        ('Unlabeled', (0, 0, 0)),
+        ('Road', (128, 64, 128)),
+        ('Sidewalk', (244, 35, 232)),
+        ('Building', (70, 70, 70)),
+        ('Wall', (102, 102, 156)),
+        ('Fence', (190, 153, 153)),
+        ('Pole', (153, 153, 153)),
+        ('Traffic_light', (250, 170, 30)),
+        ('Traffic_sign', (220, 220, 0)),
+        ('Vegetation', (107, 142, 35)),
+        ('Terrain', (152, 251, 152)),
+        ('Sky', (70, 130, 180)),
+        ('Person', (220, 20, 60)),
+        ('Rider', (255, 0, 0)),
+        ('Car', (0, 0, 142)),
+        ('Truck', (0, 0, 70)),
+        ('Bus', (0, 60, 100)),
+        ('Train', (0, 80, 100)),
+        ('Motorcycle', (0, 0, 230)),
+        ('Bicycle', (119, 11, 32))
     ])  # yapf: disable
 
     def __init__(self, root_dir, batch_size, shape=None, mode='train'):
@@ -124,9 +124,9 @@ class CityscapesGenerator(Sequence):
             index (int): index of the batch size to return.
 
         Returns:
-        A tuple of ``numpy.array`` (image_batch, label_batch) where
-        image_batch is a batch of images from tis dataset and label_batch
-        are the corresponding ground-truth labels in categorical format.
+            A tuple of ``numpy.array`` (image_batch, label_batch) where
+            image_batch is a batch of images from tis dataset and label_batch
+            are the corresponding ground-truth labels in categorical format.
 
         """
         # Create the variables that will contain the batch to return
@@ -165,16 +165,14 @@ class CityscapesGenerator(Sequence):
             )
 
             # PIL to numpy
-            # TODO: load images straight to numpy instead of PIL
             image = np.asarray(image)
             label = np.asarray(label)
 
-            # Remap class labels
-            label = utils.remap(label, self.full_classes, self.new_classes)
-
-            # Change format from class integers to categorical
-            num_classes = len(self.color_encoding)
-            label = to_categorical(np.asarray(label), num_classes)
+            # Expand the channels dimension if there isn't one
+            if np.ndim(image) == 2:
+                image = np.expand_dims(image, -1)
+            if np.ndim(label) == 2:
+                label = np.expand_dims(label, -1)
 
             # Initialize image_batch and label_batch if needed
             if image_batch is None:
@@ -187,13 +185,25 @@ class CityscapesGenerator(Sequence):
                 )
 
             # Fill image_batch and label_batch iteratively
-            image_batch[idx] = image
-            label_batch[idx] = label
+            image_batch[idx] = image.astype(np.uint8)
+            label_batch[idx] = label.astype(np.uint8)
+
+        # Remap class labels
+        label_batch = utils.remap(label_batch, self.full_classes, self.new_classes)  # yapf: disable
+
+        # Change format from class integers to categorical
+        num_classes = len(self.color_encoding)
+        label_batch = to_categorical(label_batch, num_classes)
 
         return image_batch, label_batch
 
     def __len__(self):
-        """Returns the number of batch sizes in this dataset."""
+        """Returns the number of batch sizes in this dataset.
+
+        Returns:
+            int: number of batch sizes in this dataset.
+
+        """
         if self.mode.lower() == 'train':
             return int(
                 np.ceil(len(self.train_images) / float(self.batch_size))
