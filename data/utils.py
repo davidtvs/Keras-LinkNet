@@ -86,26 +86,24 @@ def remap(image, old_values, new_values):
     index with values from ``new_values``.
 
     Args:
-        image (PIL.Image or numpy.ndarray): The image to process.
+        image (numpy.ndarray): The image to process.
         old_values (tuple): A tuple of values to be replaced.
         new_values (tuple): A tuple of new values to replace ``old_values``.
 
     Returns:
-        The remapped image of the same type as `image`
+        The image with remapped classes.
 
     """
-    assert isinstance(image, Image.Image) or isinstance(
-        image, np.ndarray
-    ), "image must be of type PIL.Image or numpy.ndarray"
     assert type(new_values) is tuple, "new_values must be of type tuple"
     assert type(old_values) is tuple, "old_values must be of type tuple"
-    assert len(new_values) == len(
-        old_values
-    ), "new_values and old_values must have the same length"
+    assert len(new_values) == len(old_values), (
+        "new_values and old_values must have the same length"
+    )
 
-    # If image is a PIL.Image convert it to a numpy array
-    if isinstance(image, Image.Image):
-        image = np.array(image)
+    # Images with more than one channel are assumed to be in categorical format
+    # therefore, they are converted to integer format
+    if image.shape[-1] > 1:
+        image = np.argmax(image, axis=-1)
 
     # Replace old values by the new ones
     remapped_img = np.zeros_like(image)
@@ -115,15 +113,10 @@ def remap(image, old_values, new_values):
         if new != 0:
             remapped_img[image == old] = new
 
-    # If the input is a PIL image return as a PIL.Image too, else return
-    # numpy array
-    if isinstance(image, Image.Image):
-        remapped_img = Image.fromarray(remapped_img)
-
     return remapped_img
 
 
-def imshow_batch(image_batch, nrows=1):
+def imshow_batch(image_batch, nrows=1, figsize=None):
     """Shows a batch of images in a grid.
 
     Note: Blocks execution until the figure is closed.
@@ -134,9 +127,14 @@ def imshow_batch(image_batch, nrows=1):
             which is transformed into (1, height, width, channels).
         nrows (int): The number of rows of the image grid. The number of
             columns is infered from the rows and the batch size.
+        figsize (tuple, optional): The size of the figure (width, height)
+            in inches. Default: None (defaults to rc figure.figsize)
 
     """
     assert nrows > 0, "number of rows must be greater than 0"
+    assert figsize is None or isinstance(
+        figsize, tuple
+    ), ("expect type None or tuple for figsize")
 
     if (np.ndim(image_batch) == 3):
         image_batch = np.expand_dims(image_batch, 0)
@@ -145,7 +143,10 @@ def imshow_batch(image_batch, nrows=1):
     ncols = int(np.ceil(image_batch.shape[0] / nrows))
 
     # Show the images with subplot
-    fig, axes = plt.subplots(nrows, ncols)
+    if figsize is None:
+        figsize = plt.rcParams.get('figure.figsize')
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize)
     for idx in range(image_batch.shape[0]):
         if nrows == 1:
             axes[idx].imshow(image_batch[idx].astype(int))
@@ -158,7 +159,7 @@ def imshow_batch(image_batch, nrows=1):
 
 
 def categorical_to_rgb(categorical_batch, class_to_rgb):
-    """Converts a label from categorical format to its RGB representation.
+    """Converts label(s) from categorical format to RGB representation.
 
     Args:
         categorical_batch (numpy.ndarray): A batch of labels in categorical
@@ -168,11 +169,14 @@ def categorical_to_rgb(categorical_batch, class_to_rgb):
         class_to_rgb (OrderedDict): An ordered dictionary that relates pixel
             values, class names, and class colors.
 
+    Returns:
+        The label(s) as RGB images.
+
     """
     if (np.ndim(categorical_batch) == 3):
         categorical_batch = np.expand_dims(categorical_batch, 0)
 
-    rgb_image = np.zeros(
+    rgb_batch = np.zeros(
         (
             categorical_batch.shape[0],
             categorical_batch.shape[1],
@@ -181,12 +185,55 @@ def categorical_to_rgb(categorical_batch, class_to_rgb):
         ),
         dtype=np.uint8
     )
-    for idx in range(categorical_batch.shape[0]):
-        image = np.argmax(categorical_batch[idx], axis=-1).squeeze()
+    for idx, image in enumerate(categorical_batch):
+        image = np.argmax(image, axis=-1).squeeze()
         for class_value, (class_name, rgb) in enumerate(class_to_rgb.items()):
-            rgb_image[idx][image == class_value] = rgb
+            rgb_batch[idx][image == class_value] = rgb
 
-    return rgb_image
+    return rgb_batch
+
+
+def rgb_to_categorical(image_batch, class_to_rgb):
+    """Converts labels from RGB to categorical representation.
+
+    Args:
+        image_batch (numpy.ndarray): A batch of labels in the RGB color-space
+            Dimension is assumed as (batch, height, width, channels);
+            or, (height, width, channels) which is transformed into
+            (1, height, width, channels).
+        class_to_rgb (OrderedDict): An ordered dictionary that relates pixel
+            values, class names, and class colors.
+
+    Returns:
+        The label(s) in categorical format.
+
+    """
+    if (np.ndim(image_batch) == 3):
+        image_batch = np.expand_dims(image_batch, 0)
+
+    categorical_batch = np.zeros(
+        (
+            image_batch.shape[0],
+            image_batch.shape[1],
+            image_batch.shape[2],
+            len(class_to_rgb),
+        ),
+        dtype=np.uint8
+    )
+    for idx, image in enumerate(image_batch):
+        for class_value, (class_name, rgb) in enumerate(class_to_rgb.items()):
+            # Create mask of pixels that match the rgb code for this class
+            mask = np.all(image == rgb, axis=-1)
+
+            # Assign the one-hot vector representation of the class to the
+            # categorical image inside the batch. The line below outputs the
+            # following:
+            # k = 1; M = 3 -> (0, 1, 0)
+            # k = 2; M = 3 -> (0, 0, 1)
+            onehot = np.eye(1, M=len(class_to_rgb), k=class_value).ravel()
+            categorical_batch[idx][mask] = onehot
+
+    return categorical_batch
 
 
 def enet_weighing(dataloader, num_classes, c=1.02):
@@ -292,4 +339,3 @@ def median_freq_balancing(dataloader, num_classes):
     med = np.median(freq)
 
     return med / freq
-
