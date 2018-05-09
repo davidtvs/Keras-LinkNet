@@ -184,10 +184,7 @@ def main():
         if class_weights is not None:
             # Handle unlabelled class
             if args.ignore_unlabelled:
-                if args.dataset.lower() == 'camvid':
-                    class_weights[-1] = 0
-                elif args.dataset.lower() == 'cityscapes':
-                    class_weights[0] = 0
+                class_weights[0] = 0
 
         print("--> Class weights: {}".format(class_weights))
 
