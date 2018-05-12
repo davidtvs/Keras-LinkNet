@@ -211,17 +211,17 @@ def main():
     print("--> Checkpoint path: {}".format(checkpoint_path))
 
     model = None
-    if args.resume:
-        print("--> Resuming model: {}".format(checkpoint_path))
-        model = load_model(
-            checkpoint_path,
-            custom_objects={
-                'Conv2DTranspose': Conv2DTranspose,
-                'mean_iou': MeanIoU(num_classes).mean_iou
-            }
-        )
 
     if args.mode.lower() in ('train', 'full'):
+        if args.resume:
+            print("--> Resuming model: {}".format(checkpoint_path))
+            model = load_model(
+                checkpoint_path,
+                custom_objects={
+                    'Conv2DTranspose': Conv2DTranspose,
+                    'mean_iou': MeanIoU(num_classes).mean_iou
+                }
+            )
         tensorboard_logdir = os.path.join(args.checkpoint_dir, args.name)
         model = train(
             args.epochs,
@@ -242,7 +242,14 @@ def main():
         )
 
     if args.mode.lower() in ('test', 'full'):
-        assert model is not None, "model is not defined"
+        print("--> Loading model: {}".format(checkpoint_path))
+        model = load_model(
+            checkpoint_path,
+            custom_objects={
+                'Conv2DTranspose': Conv2DTranspose,
+                'mean_iou': MeanIoU(num_classes).mean_iou
+            }
+        )
         model = test(model, test_generator, args.workers, args.verbose)
 
 
