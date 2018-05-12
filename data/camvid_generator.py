@@ -23,9 +23,9 @@ class CamVidGenerator(Sequence):
     labels_folder = 'LabeledApproved_full'
 
     # Image names files for each dataset split (same as SegNet)
-    train_names_file = 'train.txt'
-    val_names_file = 'val.txt'
-    test_names_file = 'test.txt'
+    train_names_file = 'segnet_train.txt'
+    val_names_file = 'segnet_val.txt'
+    test_names_file = 'segnet_test.txt'
 
     # Label name suffix
     label_suffix = '_L'
