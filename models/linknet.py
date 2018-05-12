@@ -351,7 +351,7 @@ class LinkNet():
             bias=self.bias,
             name=name + '/1'
         )
-        decoder2 = Add(name=name + '/shortcut_init_d1')([initial2, decoder1])
+        decoder1 = Add(name=name + '/shortcut_init_d1')([initial2, decoder1])
 
         # Final block
         # Build the output shape of the next layer - same width and height
