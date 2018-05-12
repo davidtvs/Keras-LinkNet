@@ -1,10 +1,8 @@
 import os
-
 from keras.models import load_model
 from keras.optimizers import Adam
 from keras.callbacks import LearningRateScheduler, TensorBoard, \
     ModelCheckpoint, EarlyStopping
-
 from args import get_arguments
 from models.linknet import LinkNet
 from models.conv2d_transpose import Conv2DTranspose

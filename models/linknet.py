@@ -71,7 +71,7 @@ class LinkNet():
 
         # Build decoder
         decoder_model = self.get_decoder(encoder_out)
-        decoder_out = decoder_model(encoder_out)
+        decoder_out = decoder_model(encoder_out[:-1])
 
         return Model(inputs=self.input, outputs=decoder_out, name=self.name)
 
@@ -310,7 +310,7 @@ class LinkNet():
         encoder2 = Input(shape=int_shape(inputs[2])[1:], name='encoder2')
         encoder1 = Input(shape=int_shape(inputs[3])[1:], name='encoder1')
         initial2 = Input(shape=int_shape(inputs[4])[1:], name='initial2')
-        initial1 = Input(shape=int_shape(inputs[5])[1:], name='initial1')
+        initial1 = inputs[5]
 
         # Decoder blocks
         decoder4 = self.decoder_block(
@@ -397,7 +397,7 @@ class LinkNet():
 
         return Model(
             inputs=[
-                encoder4, encoder3, encoder2, encoder1, initial2, initial1
+                encoder4, encoder3, encoder2, encoder1, initial2
             ],
             outputs=prediction,
             name=name
