@@ -75,7 +75,7 @@ def get_arguments():
         "--lr_decay",
         type=float,
         default=0.1,
-        help="The learning rate decay factor. Default: 0.5"
+        help="The learning rate decay factor. Default: 0.1"
     )
     parser.add_argument(
         "--lr_decay_epochs",
