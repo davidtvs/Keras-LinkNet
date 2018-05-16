@@ -33,10 +33,10 @@ class Conv2DTranspose(Conv2D):
             any `dilation_rate` value != 1.
         padding: one of `"valid"` or `"same"` (case-insensitive).
         output_shape: A tuple of integers specifying the shape of the output
-            without the batch size. If not specified, the output shape is
-            computed from the input shape. Though, for some combinations
-            of input shape and layer hyperparameters, the output shape is
-            ambigous which can result in an undesired output shape.
+            without the batch size. When not specified, the output shape is
+            inferred from the input shape. For some combinations of input
+            shape and layer parameters, the output shape is ambigous which
+            can result in an undesired output shape.
         data_format: A string,
             one of `channels_last` (default) or `channels_first`.
             The ordering of the dimensions in the inputs.
@@ -127,7 +127,8 @@ class Conv2DTranspose(Conv2D):
             **kwargs
         )
         self.input_spec = InputSpec(ndim=4)
-        self._output_shape = tuple(output_shape)
+        if output_shape is not None:
+            self._output_shape = tuple(output_shape)
 
     def build(self, input_shape):
         if len(input_shape) != 4:
