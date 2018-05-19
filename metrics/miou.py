@@ -11,15 +11,41 @@ class MeanIoU(object):
 
         IoU = true_positive / (true_positive + false_positive + false_negative).
 
+    The mean IoU is the mean of IoU between all classes.
+
     Keyword arguments:
         num_classes (int): number of classes in the classification problem.
+        ignore (int or tuple): a single integer or tuple of intergers in the
+            range [0, `num_classes` - 1] identifying the classes to ignore when
+            computing the mean IoU. Default: None, no class is ignored.
 
     """
 
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, ignore=None):
         super().__init__()
 
         self.num_classes = num_classes
+
+        # Handle the three types of input for ignore: None, int, and iterable
+        if ignore is None:
+            self.ignore = None
+        elif isinstance(ignore, int):
+            # We are going to make a mask of classes to ignore. Therefore, we
+            # make an array with 'num_classes' elements and set elements
+            # to True if we want to ignore the class and False otherwise
+            self.ignore = np.zeros((num_classes), dtype=bool)
+            self.ignore[ignore] = True
+        else:
+            # Same as above, but now we have an iterable inestead of an int
+            self.ignore = np.zeros((num_classes), dtype=bool)
+            for i in ignore:
+                if 0 <= i < num_classes:
+                    self.ignore[i] = True
+                else:
+                    raise ValueError(
+                        "ignore argument values not in range [0, {}]".
+                        format(num_classes - 1)
+                    )
 
     def mean_iou(self, y_true, y_pred):
         """The metric function to be passed to the model.
@@ -60,16 +86,23 @@ class MeanIoU(object):
             x.astype(np.int32), minlength=self.num_classes**2
         )
         assert bincount_2d.size == self.num_classes**2
-        conf = bincount_2d.reshape(
-            (self.num_classes, self.num_classes)
-        )
+        conf = bincount_2d.reshape((self.num_classes, self.num_classes))
 
         # Compute the IoU and mean IoU from the confusion matrix
         true_positive = np.diag(conf)
         false_positive = np.sum(conf, 0) - true_positive
         false_negative = np.sum(conf, 1) - true_positive
+
+        # Just in case we get a division by 0, ignore/hide the error and
+        # set the value to 0
         with np.errstate(divide='ignore', invalid='ignore'):
-            iou = true_positive / (true_positive + false_positive + false_negative)
+            iou = true_positive / (
+                true_positive + false_positive + false_negative
+            )
         iou[np.isnan(iou)] = 0
+
+        # Remove classes set to be ignored from IoU array
+        if self.ignore is not None:
+            iou = iou[~self.ignore]
 
         return np.mean(iou).astype(np.float32)

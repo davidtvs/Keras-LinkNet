@@ -45,8 +45,15 @@ def train(
     # Optimizer: Adam
     optim = Adam(learning_rate)
 
+    # Get the classes to ignore by checking which class weights are 0
+    ignore = []
+    for idx, w in enumerate(class_weights):
+        if w == 0:
+            ignore.append(idx)
+
+    print(ignore)
     # Initialize mIoU metric
-    miou_metric = MeanIoU(num_classes)
+    miou_metric = MeanIoU(num_classes, ignore)
 
     # Compile the model
     # Loss: Categorical crossentropy loss
