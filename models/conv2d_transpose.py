@@ -127,8 +127,11 @@ class Conv2DTranspose(Conv2D):
             **kwargs
         )
         self.input_spec = InputSpec(ndim=4)
-        if output_shape is not None:
-            self._output_shape = tuple(output_shape)
+        self._output_shape = output_shape
+        if output_shape is not None and len(output_shape) != 3:
+            raise ValueError('Outputs should have rank ' +
+                             str(3) +
+                             '; Received output shape:', str(output_shape))
 
     def build(self, input_shape):
         if len(input_shape) != 4:
