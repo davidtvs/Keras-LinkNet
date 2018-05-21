@@ -23,7 +23,7 @@ python main.py [-h] [--mode {train,test,full}] [--resume RESUME]
                [--lr_decay LR_DECAY] [--lr_decay_epochs LR_DECAY_EPOCHS]
                [--dataset {camvid,cityscapes}] [--dataset_dir DATASET_DIR]
                [--weighing {enet,mfb,none}]
-               [--ignore_unlabelled IGNORE_UNLABELLED] [--workers WORKERS]
+               [--ignore_unlabeled IGNORE_UNLABELLED] [--workers WORKERS]
                [--verbose {0,1,2}] [--name NAME]
                [--checkpoint_dir CHECKPOINT_DIR]
 ```

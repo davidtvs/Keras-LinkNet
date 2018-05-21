@@ -113,11 +113,11 @@ def get_arguments():
         )
     )
     parser.add_argument(
-        "--ignore_unlabelled",
+        "--ignore_unlabeled",
         type=bool,
         default=True,
         help=(
-            "If True, the unlabelled class weight is ignored (set to 0); "
+            "If True, the unlabeled class weight is ignored (set to 0); "
             "otherwise, it's kept as computed. Default: True"
         )
     )

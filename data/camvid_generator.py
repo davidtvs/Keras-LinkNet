@@ -101,13 +101,13 @@ class CamVidGenerator(Sequence):
         batch_size,
         shape=None,
         mode='train',
-        ignore_unlabelled=True
+        ignore_unlabeled=True
     ):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.shape = shape
         self.mode = mode
-        self.ignore_unlabelled = ignore_unlabelled
+        self.ignore_unlabeled = ignore_unlabeled
         self.train_images = []
         self.train_labels = []
         self.val_images = []
@@ -253,8 +253,8 @@ class CamVidGenerator(Sequence):
         num_classes = len(self._color_encoding12)
         label_batch = to_categorical(label_batch, num_classes)
 
-        # Ignore the unlabelled layer by removing its channel from the labels
-        if self.ignore_unlabelled:
+        # Ignore the unlabeled layer by removing its channel from the labels
+        if self.ignore_unlabeled:
             label_batch = label_batch[:, :, :, 1:]
 
         return image_batch, label_batch
@@ -282,7 +282,7 @@ class CamVidGenerator(Sequence):
 
     def get_class_rgb_encoding(self):
         class_rgb_encoding = self._color_encoding12.copy()
-        if self.ignore_unlabelled:
+        if self.ignore_unlabeled:
             del class_rgb_encoding['Unlabeled']
 
         return class_rgb_encoding

@@ -147,13 +147,13 @@ def main():
             args.dataset_dir,
             batch_size=args.batch_size,
             mode='train',
-            ignore_unlabelled=args.ignore_unlabelled
+            ignore_unlabeled=args.ignore_unlabeled
         )
         val_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
             mode='val',
-            ignore_unlabelled=args.ignore_unlabelled
+            ignore_unlabeled=args.ignore_unlabeled
         )
 
         # Some information about the dataset
@@ -178,10 +178,10 @@ def main():
                     train_generator, num_classes
                 )
 
-        # Set the unlabelled class weight to 0 if requested
+        # Set the unlabeled class weight to 0 if requested
         #if class_weights is not None:
-            # Handle unlabelled class
-        #    if args.ignore_unlabelled:
+            # Handle unlabeled class
+        #    if args.ignore_unlabeled:
         #        class_weights[0] = 0
 
         print("--> Class weights: {}".format(class_weights))
@@ -192,7 +192,7 @@ def main():
             args.dataset_dir,
             batch_size=args.batch_size,
             mode='test',
-            ignore_unlabelled=args.ignore_unlabelled
+            ignore_unlabeled=args.ignore_unlabeled
         )
 
         # Some information about the dataset

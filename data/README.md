@@ -3,7 +3,7 @@
 - CamVid
 - Cityscapes
 
-Note: When referring to the number of classes, the void/unlabelled class is excluded.
+Note: When referring to the number of classes, the void/unlabeled class is excluded.
 
 ## CamVid Dataset
 
