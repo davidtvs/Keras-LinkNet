@@ -44,7 +44,7 @@ class CamVidGenerator(Sequence):
         10, 10, 11, 11, 9, 9, 9, 9, 9
     )
 
-    color_encoding32 = OrderedDict([
+    _color_encoding32 = OrderedDict([
         ('Unlabeled', (0, 0, 0)),
         ('Building', (128, 0, 0)),
         ('Wall', (64, 192, 0)),
@@ -80,7 +80,7 @@ class CamVidGenerator(Sequence):
     ])  # yapf: disable
 
     # Default encoding for pixel value, class name, and class color
-    color_encoding = OrderedDict([
+    _color_encoding12 = OrderedDict([
         ('Unlabeled', (0, 0, 0)),
         ('Sky', (128, 128, 128)),
         ('Building', (128, 0, 0)),
@@ -95,11 +95,19 @@ class CamVidGenerator(Sequence):
         ('Bicyclist', (0, 128, 192))
     ])  # yapf: disable
 
-    def __init__(self, root_dir, batch_size, shape=None, mode='train'):
+    def __init__(
+        self,
+        root_dir,
+        batch_size,
+        shape=None,
+        mode='train',
+        ignore_unlabelled=True
+    ):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.shape = shape
         self.mode = mode
+        self.ignore_unlabelled = ignore_unlabelled
         self.train_images = []
         self.train_labels = []
         self.val_images = []
@@ -236,14 +244,18 @@ class CamVidGenerator(Sequence):
             label_batch[idx] = label.astype(np.uint8)
 
         # Convert 32-class labels from RGB to categorical format
-        label_batch = utils.rgb_to_categorical(label_batch, self.color_encoding32)  # yapf: disable
+        label_batch = utils.rgb_to_categorical(label_batch, self._color_encoding32)  # yapf: disable
 
         # Remap class labels; returns label in categorical format
         label_batch = utils.remap(label_batch, self.full_classes, self.new_classes)  # yapf: disable
 
         # Change format from class integers to categorical
-        num_classes = len(self.color_encoding)
+        num_classes = len(self._color_encoding12)
         label_batch = to_categorical(label_batch, num_classes)
+
+        # Ignore the unlabelled layer by removing its channel from the labels
+        if self.ignore_unlabelled:
+            label_batch = label_batch[:, :, :, 1:]
 
         return image_batch, label_batch
 
@@ -267,3 +279,10 @@ class CamVidGenerator(Sequence):
                 "Unexpected dataset mode. "
                 "Supported modes are: train, val and test"
             )
+
+    def get_class_rgb_encoding(self):
+        class_rgb_encoding = self._color_encoding12.copy()
+        if self.ignore_unlabelled:
+            del class_rgb_encoding['Unlabeled']
+
+        return class_rgb_encoding

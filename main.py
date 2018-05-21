@@ -74,7 +74,7 @@ def train(
     # target and prediction
     tensorboard_viz = TensorBoardPrediction(
         val_generator,
-        val_generator.color_encoding,
+        val_generator.get_class_rgb_encoding(),
         log_dir=tensorboard_logdir
     )
 
@@ -144,10 +144,16 @@ def main():
     # Initialize training and validation dataloaders
     if args.mode.lower() in ('train', 'full'):
         train_generator = DataGenerator(
-            args.dataset_dir, batch_size=args.batch_size, mode='train'
+            args.dataset_dir,
+            batch_size=args.batch_size,
+            mode='train',
+            ignore_unlabelled=args.ignore_unlabelled
         )
         val_generator = DataGenerator(
-            args.dataset_dir, batch_size=args.batch_size, mode='val'
+            args.dataset_dir,
+            batch_size=args.batch_size,
+            mode='val',
+            ignore_unlabelled=args.ignore_unlabelled
         )
 
         # Some information about the dataset
@@ -157,13 +163,11 @@ def main():
         print("--> Validation batches: {}".format(len(val_generator)))
         print("--> Image size: {}".format(image_batch.shape))
         print("--> Label size: {}".format(label_batch.shape))
-        print(
-            "--> No. of classes (including unlabelled): {}".
-            format(num_classes)
-        )
+        print("--> No. of classes: {}".format(num_classes))
 
         # Compute class weights if needed
         print("--> Weighing technique: {}".format(args.weighing))
+        class_weights = None
         if (args.weighing is not None):
             print("--> Computing class weights...")
             print("--> (this can take a while depending on the dataset size)")
@@ -173,23 +177,22 @@ def main():
                 class_weights = median_freq_balancing(
                     train_generator, num_classes
                 )
-            else:
-                class_weights = None
-        else:
-            class_weights = None
 
         # Set the unlabelled class weight to 0 if requested
-        if class_weights is not None:
+        #if class_weights is not None:
             # Handle unlabelled class
-            if args.ignore_unlabelled:
-                class_weights[0] = 0
+        #    if args.ignore_unlabelled:
+        #        class_weights[0] = 0
 
         print("--> Class weights: {}".format(class_weights))
 
     # Initialize test dataloader
     if args.mode.lower() in ('test', 'full'):
         test_generator = DataGenerator(
-            args.dataset_dir, batch_size=args.batch_size, mode='test'
+            args.dataset_dir,
+            batch_size=args.batch_size,
+            mode='test',
+            ignore_unlabelled=args.ignore_unlabelled
         )
 
         # Some information about the dataset
@@ -198,10 +201,7 @@ def main():
         print("--> Testing batches: {}".format(len(test_generator)))
         print("--> Image size: {}".format(image_batch.shape))
         print("--> Label size: {}".format(label_batch.shape))
-        print(
-            "--> No. of classes (including unlabelled): {}".
-            format(num_classes)
-        )
+        print("--> No. of classes: {}".format(num_classes))
 
     checkpoint_path = os.path.join(
         args.checkpoint_dir, args.name, args.name + '.h5'

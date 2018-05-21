@@ -46,7 +46,7 @@ class CityscapesGenerator(Sequence):
     )
 
     # Default encoding for pixel value, class name, and class color
-    color_encoding = OrderedDict([
+    _color_encoding20 = OrderedDict([
         ('Unlabeled', (0, 0, 0)),
         ('Road', (128, 64, 128)),
         ('Sidewalk', (244, 35, 232)),
@@ -69,11 +69,19 @@ class CityscapesGenerator(Sequence):
         ('Bicycle', (119, 11, 32))
     ])  # yapf: disable
 
-    def __init__(self, root_dir, batch_size, shape=None, mode='train'):
+    def __init__(
+        self,
+        root_dir,
+        batch_size,
+        shape=None,
+        mode='train',
+        ignore_unlabelled=True
+    ):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.shape = shape
         self.mode = mode
+        self.ignore_unlabelled = ignore_unlabelled
 
         if self.mode.lower() == 'train':
             # Get the training data and labels filepaths
@@ -192,8 +200,12 @@ class CityscapesGenerator(Sequence):
         label_batch = utils.remap(label_batch, self.full_classes, self.new_classes)  # yapf: disable
 
         # Change format from class integers to categorical
-        num_classes = len(self.color_encoding)
+        num_classes = len(self._color_encoding20)
         label_batch = to_categorical(label_batch, num_classes)
+
+        # Ignore the unlabelled layer by removing its channel from the labels
+        if self.ignore_unlabelled:
+            label_batch = label_batch[:, :, :, 1:]
 
         return image_batch, label_batch
 
@@ -217,3 +229,10 @@ class CityscapesGenerator(Sequence):
                 "Unexpected dataset mode. "
                 "Supported modes are: train, val and test"
             )
+
+    def get_class_rgb_encoding(self):
+        class_rgb_encoding = self._color_encoding20.copy()
+        if self.ignore_unlabelled:
+            del class_rgb_encoding['Unlabeled']
+
+        return class_rgb_encoding
