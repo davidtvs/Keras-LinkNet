@@ -11,6 +11,8 @@ class MeanIoU(object):
 
         IoU = true_positive / (true_positive + false_positive + false_negative).
 
+    The mean IoU is the mean of IoU between all classes.
+
     Keyword arguments:
         num_classes (int): number of classes in the classification problem.
 
@@ -68,6 +70,9 @@ class MeanIoU(object):
         true_positive = np.diag(conf)
         false_positive = np.sum(conf, 0) - true_positive
         false_negative = np.sum(conf, 1) - true_positive
+
+        # Just in case we get a division by 0, ignore/hide the error and
+        # set the value to 0
         with np.errstate(divide='ignore', invalid='ignore'):
             iou = true_positive / (true_positive + false_positive + false_negative)
         iou[np.isnan(iou)] = 0
