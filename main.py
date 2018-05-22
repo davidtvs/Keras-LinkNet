@@ -178,12 +178,6 @@ def main():
                     train_generator, num_classes
                 )
 
-        # Set the unlabeled class weight to 0 if requested
-        #if class_weights is not None:
-            # Handle unlabeled class
-        #    if args.ignore_unlabeled:
-        #        class_weights[0] = 0
-
         print("--> Class weights: {}".format(class_weights))
 
     # Initialize test dataloader
