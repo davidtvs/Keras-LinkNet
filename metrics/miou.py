@@ -72,9 +72,10 @@ class MeanIoU(object):
         false_negative = np.sum(conf, 1) - true_positive
 
         # Just in case we get a division by 0, ignore/hide the error and
-        # set the value to 0
+        # set the value to 1 since we predicted 0 pixels for that class and
+        # and the batch has 0 pixels for that same class
         with np.errstate(divide='ignore', invalid='ignore'):
             iou = true_positive / (true_positive + false_positive + false_negative)
-        iou[np.isnan(iou)] = 0
+        iou[np.isnan(iou)] = 1
 
         return np.mean(iou).astype(np.float32)
