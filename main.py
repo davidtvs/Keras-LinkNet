@@ -1,6 +1,6 @@
 import os
 from keras.models import load_model
-from keras.optimizers import Adam
+from keras.optimizers import RMSprop
 from keras.callbacks import LearningRateScheduler, TensorBoard, \
     ModelCheckpoint, EarlyStopping
 from args import get_arguments
@@ -43,7 +43,7 @@ def train(
     print(model.summary())
 
     # Optimizer: Adam
-    optim = Adam(learning_rate)
+    optim = RMSprop(learning_rate)
 
     # Initialize mIoU metric
     miou_metric = MeanIoU(num_classes)
