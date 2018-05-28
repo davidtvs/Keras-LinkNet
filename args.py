@@ -19,12 +19,10 @@ def get_arguments():
     )
     parser.add_argument(
         "--resume",
-        type=bool,
-        default=False,
+        action='store_true',
         help=(
-            "If set to true, the model found in \"--save_dir\" with name "
-            "\"--name\" is loaded and training is resumed from the epoch it "
-            "was saved in. Default: False"
+            "The model found in \"--checkpoint_dir/--name/\" and filename "
+            "\"--name.h5\" is loaded."
         )
     )
     parser.add_argument(
@@ -34,10 +32,12 @@ def get_arguments():
         help="Epoch at which to start training. Default: 0"
     )
     parser.add_argument(
-        "--pretrained_encoder",
-        type=bool,
-        default=True,
-        help="Whether to load pretrained encoder weights or not. Default: True"
+        "--no-pretrained-encoder",
+        dest='pretrained_encoder',
+        action='store_false',
+        help=(
+            "Pretrained encoder weights are not loaded."
+        )
     )
     parser.add_argument(
         "--weights_path",
@@ -112,6 +112,14 @@ def get_arguments():
             "Default: enet"
         )
     )
+    parser.add_argument(
+        "--with-unlabeled",
+        dest='ignore_unlabeled',
+        action='store_false',
+        help=(
+            "The unlabeled class is not ignored."
+        )
+    )
 
     # Settings
     parser.add_argument(
@@ -143,27 +151,5 @@ def get_arguments():
         default='checkpoints',
         help="The directory where models are saved. Default: checkpoints"
     )
-
-    # Mutually exclusive groups
-    exclusive_group = parser.add_mutually_exclusive_group(required=False)
-    exclusive_group.add_argument(
-        "--unlabeled",
-        dest='ignore_unlabeled',
-        action='store_false',
-        help=(
-            "The unlabeled class is not ignored"
-        )
-    )
-    exclusive_group.add_argument(
-        "--no-unlabeled",
-        dest='ignore_unlabeled',
-        action='store_true',
-        help=(
-            "The unlabeled class is ignored"
-        )
-    )
-
-    # Set a default for so we don't have to always specify one or the other
-    parser.set_defaults(ignore_unlabeled=True)
 
     return parser.parse_args()
