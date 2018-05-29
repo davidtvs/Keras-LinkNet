@@ -13,7 +13,7 @@ def get_arguments():
         default='train',
         help=(
             "train: performs training and validation; test: tests the model "
-            "found in \"--save_dir\" with name \"--name\" on \"--dataset\"; "
+            "found in \"--checkpoint-dir\" with name \"--name\" on \"--dataset\"; "
             "full: combines train and test modes. Default: train"
         )
     )
@@ -21,12 +21,12 @@ def get_arguments():
         "--resume",
         action='store_true',
         help=(
-            "The model found in \"--checkpoint_dir/--name/\" and filename "
+            "The model found in \"--checkpoint-dir/--name/\" and filename "
             "\"--name.h5\" is loaded."
         )
     )
     parser.add_argument(
-        "--initial_epoch",
+        "--initial-epoch",
         type=int,
         default=0,
         help="Epoch at which to start training. Default: 0"
@@ -40,19 +40,19 @@ def get_arguments():
         )
     )
     parser.add_argument(
-        "--weights_path",
+        "--weights-path",
         type=str,
         default="./checkpoints/linknet_encoder_weights.h5",
         help=(
             "HDF5 file where the weights are stored. This setting is ignored "
-            "if \"--pretrained_encoder\" is set to False. Default: "
+            "if \"--no-pretrained-encoder\" is set. Default: "
             "/checkpoints/linknet_encoder_weights.h5"
         )
     )
 
     # Hyperparameters
     parser.add_argument(
-        "--batch_size",
+        "--batch-size",
         "-b",
         type=int,
         default=10,
@@ -65,20 +65,20 @@ def get_arguments():
         help="Number of training epochs. Default: 300"
     )
     parser.add_argument(
-        "--learning_rate",
+        "--learning-rate",
         "-lr",
         type=float,
         default=5e-4,
         help="The learning rate. Default: 5e-4"
     )
     parser.add_argument(
-        "--lr_decay",
+        "--lr-decay",
         type=float,
         default=0.1,
         help="The learning rate decay factor. Default: 0.1"
     )
     parser.add_argument(
-        "--lr_decay_epochs",
+        "--lr-decay-epochs",
         type=int,
         default=100,
         help=(
@@ -95,7 +95,7 @@ def get_arguments():
         help="Dataset to use. Default: camvid"
     )
     parser.add_argument(
-        "--dataset_dir",
+        "--dataset-dir",
         type=str,
         default="data/CamVid",
         help=(
@@ -146,7 +146,7 @@ def get_arguments():
         help="Name given to the model when saving. Default: LinkNet"
     )
     parser.add_argument(
-        "--checkpoint_dir",
+        "--checkpoint-dir",
         type=str,
         default='checkpoints',
         help="The directory where models are saved. Default: checkpoints"

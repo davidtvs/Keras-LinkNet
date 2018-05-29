@@ -15,17 +15,15 @@ Keras implementation of [*LinkNet: Exploiting Encoder Representations for Effici
 Run [``main.py``](https://github.com/davidtvs/Keras-LinkNet/blob/master/main.py), the main script file used for training and/or testing the model. The following options are supported:
 
 ```
-python main.py [-h] [--mode {train,test,full}] [--resume RESUME]
-               [--initial_epoch INITIAL_EPOCH]
-               [--pretrained_encoder PRETRAINED_ENCODER]
-               [--weights_path WEIGHTS_PATH] [--batch_size BATCH_SIZE]
-               [--epochs EPOCHS] [--learning_rate LEARNING_RATE]
-               [--lr_decay LR_DECAY] [--lr_decay_epochs LR_DECAY_EPOCHS]
-               [--dataset {camvid,cityscapes}] [--dataset_dir DATASET_DIR]
-               [--weighing {enet,mfb,none}]
-               [--ignore_unlabeled IGNORE_UNLABELLED] [--workers WORKERS]
-               [--verbose {0,1,2}] [--name NAME]
-               [--checkpoint_dir CHECKPOINT_DIR]
+python main.py [-h] [--mode {train,test,full}] [--resume]
+               [--initial-epoch INITIAL_EPOCH] [--no-pretrained-encoder]
+               [--weights-path WEIGHTS_PATH] [--batch-size BATCH_SIZE]
+               [--epochs EPOCHS] [--learning-rate LEARNING_RATE]
+               [--lr-decay LR_DECAY] [--lr-decay-epochs LR_DECAY_EPOCHS]
+               [--dataset {camvid,cityscapes}] [--dataset-dir DATASET_DIR]
+               [--weighing {enet,mfb,none}] [--with-unlabeled]
+               [--workers WORKERS] [--verbose {0,1,2}] [--name NAME]
+               [--checkpoint-dir CHECKPOINT_DIR]
 ```
 
 For help on the optional arguments run: ``python main.py -h``
@@ -34,21 +32,21 @@ For help on the optional arguments run: ``python main.py -h``
 ### Examples: Training
 
 ```
-python main.py -m train --checkpoint_dir save/folder/ --name model_name --dataset name --dataset_dir path/root_directory/
+python main.py -m train --checkpoint-dir save/folder/ --name model_name --dataset name --dataset-dir path/root_directory/
 ```
 
 
 ### Examples: Resuming training
 
 ```
-python main.py -m train --resume True --initial_epoch 10 --checkpoint_dir save/folder/ --name model_name --dataset name --dataset_dir path/root_directory/
+python main.py -m train --resume True --initial-epoch 10 --checkpoint-dir save/folder/ --name model_name --dataset name --dataset-dir path/root_directory/
 ```
 
 
 ### Examples: Testing
 
 ```
-python main.py -m test --checkpoint_dir save/folder/ --name model_name --dataset name --dataset_dir path/root_directory/
+python main.py -m test --checkpoint-dir save/folder/ --name model_name --dataset name --dataset-dir path/root_directory/
 ```
 
 
