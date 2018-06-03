@@ -16,6 +16,7 @@ def train(
     initial_epoch,
     train_generator,
     val_generator,
+    ignore_index,
     class_weights,
     learning_rate,
     lr_decay,
@@ -42,11 +43,11 @@ def train(
 
     print(model.summary())
 
-    # Optimizer: Adam
+    # Optimizer: RMSprop
     optim = RMSprop(learning_rate)
 
     # Initialize mIoU metric
-    miou_metric = MeanIoU(num_classes)
+    miou_metric = MeanIoU(num_classes, ignore_index=ignore_index)
 
     # Compile the model
     # Loss: Categorical crossentropy loss
@@ -146,14 +147,12 @@ def main():
         train_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='train',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='train'
         )
         val_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='val',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='val'
         )
 
         # Some information about the dataset
@@ -178,6 +177,11 @@ def main():
                     train_generator, num_classes
                 )
 
+        if class_weights is not None and args.ignore_unlabeled:
+            class_keys = list(train_generator.get_class_rgb_encoding())
+            ignore_index = class_keys.index('Unlabeled')
+            class_weights[ignore_index] = 0
+
         print("--> Class weights: {}".format(class_weights))
 
     # Initialize test dataloader
@@ -185,8 +189,7 @@ def main():
         test_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='test',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='test'
         )
 
         # Some information about the dataset
@@ -202,6 +205,10 @@ def main():
     )
     print("--> Checkpoint path: {}".format(checkpoint_path))
 
+    if args.ignore_unlabeled:
+        class_keys = list(train_generator.get_class_rgb_encoding())
+        ignore_index = class_keys.index('Unlabeled')
+
     model = None
 
     if args.mode.lower() in ('train', 'full'):
@@ -211,7 +218,7 @@ def main():
                 checkpoint_path,
                 custom_objects={
                     'Conv2DTranspose': Conv2DTranspose,
-                    'mean_iou': MeanIoU(num_classes).mean_iou
+                    'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou
                 }
             )
         tensorboard_logdir = os.path.join(args.checkpoint_dir, args.name)
@@ -220,6 +227,7 @@ def main():
             args.initial_epoch,
             train_generator,
             val_generator,
+            ignore_index,
             class_weights,
             args.learning_rate,
             args.lr_decay,
@@ -239,7 +247,7 @@ def main():
             checkpoint_path,
             custom_objects={
                 'Conv2DTranspose': Conv2DTranspose,
-                'mean_iou': MeanIoU(num_classes).mean_iou
+                'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou
             }
         )
         model = test(model, test_generator, args.workers, args.verbose)

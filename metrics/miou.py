@@ -9,19 +9,32 @@ class MeanIoU(object):
     segmentation. The predictions are first accumulated in a confusion matrix
     and the IoU is computed from it as follows:
 
-        IoU = true_positive / (true_positive + false_positive + false_negative).
+        IoU = true_positive / (true_positive + false_positive + false_negative)
 
     The mean IoU is the mean of IoU between all classes.
 
     Keyword arguments:
         num_classes (int): number of classes in the classification problem.
+        ignore_index (int or iterable, optional): Index of the classes to
+            ignore when computing the IoU. Can be an int, or any iterable of
+            ints.
 
     """
 
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, ignore_index=None):
         super().__init__()
 
         self.num_classes = num_classes
+
+        if ignore_index is None:
+            self.ignore_index = None
+        elif isinstance(ignore_index, int):
+            self.ignore_index = (ignore_index, )
+        else:
+            try:
+                self.ignore_index = tuple(ignore_index)
+            except TypeError:
+                raise ValueError("'ignore_index' must be an int or iterable")
 
     def mean_iou(self, y_true, y_pred):
         """The metric function to be passed to the model.
@@ -62,20 +75,19 @@ class MeanIoU(object):
             x.astype(np.int32), minlength=self.num_classes**2
         )
         assert bincount_2d.size == self.num_classes**2
-        conf = bincount_2d.reshape(
-            (self.num_classes, self.num_classes)
-        )
+        conf = bincount_2d.reshape((self.num_classes, self.num_classes))
 
         # Compute the IoU and mean IoU from the confusion matrix
+        if self.ignore_index is not None:
+            for index in self.ignore_index:
+                conf[:, self.ignore_index] = 0
+                conf[self.ignore_index, :] = 0
         true_positive = np.diag(conf)
         false_positive = np.sum(conf, 0) - true_positive
         false_negative = np.sum(conf, 1) - true_positive
 
-        # Just in case we get a division by 0, ignore/hide the error and
-        # set the value to 1 since we predicted 0 pixels for that class and
-        # and the batch has 0 pixels for that same class
+        # Just in case we get a division by 0, ignore/hide the error
         with np.errstate(divide='ignore', invalid='ignore'):
-            iou = true_positive / (true_positive + false_positive + false_negative)
-        iou[np.isnan(iou)] = 1
+            iou = true_positive / (true_positive + false_positive + false_negative)  # yapf: disable
 
-        return np.mean(iou).astype(np.float32)
+        return np.nanmean(iou).astype(np.float32)

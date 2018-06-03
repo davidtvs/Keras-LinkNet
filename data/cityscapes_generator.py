@@ -74,14 +74,12 @@ class CityscapesGenerator(Sequence):
         root_dir,
         batch_size,
         shape=None,
-        mode='train',
-        ignore_unlabeled=True
+        mode='train'
     ):
         self.root_dir = root_dir
         self.batch_size = batch_size
         self.shape = shape
         self.mode = mode
-        self.ignore_unlabeled = ignore_unlabeled
 
         if self.mode.lower() == 'train':
             # Get the training data and labels filepaths
@@ -203,10 +201,6 @@ class CityscapesGenerator(Sequence):
         num_classes = len(self._color_encoding20)
         label_batch = to_categorical(label_batch, num_classes)
 
-        # Ignore the unlabeled layer by removing its channel from the labels
-        if self.ignore_unlabeled:
-            label_batch = label_batch[:, :, :, 1:]
-
         return image_batch, label_batch
 
     def __len__(self):
@@ -231,8 +225,9 @@ class CityscapesGenerator(Sequence):
             )
 
     def get_class_rgb_encoding(self):
-        class_rgb_encoding = self._color_encoding20.copy()
-        if self.ignore_unlabeled:
-            del class_rgb_encoding['Unlabeled']
-
-        return class_rgb_encoding
+        """
+        Returns:
+            An ordered dictionary encoding for pixel value, class name, and
+            class color.
+        """
+        return self._color_encoding20.copy()
