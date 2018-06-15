@@ -283,7 +283,7 @@ def enet_weighing(dataloader, num_classes, c=1.02):
     propensity_score = class_count / total
     class_weights = 1 / (np.log(c + propensity_score))
 
-    return class_weights
+    return {idx: w for idx, w in enumerate(class_weights)}
 
 
 def median_freq_balancing(dataloader, num_classes):
@@ -337,5 +337,6 @@ def median_freq_balancing(dataloader, num_classes):
     # Compute the frequency and its median
     freq = class_count / total
     med = np.median(freq)
+    class_weights = med / freq
 
-    return med / freq
+    return {idx: w for idx, w in enumerate(class_weights)}
