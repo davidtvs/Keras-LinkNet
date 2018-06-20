@@ -9,6 +9,7 @@ from models.conv2d_transpose import Conv2DTranspose
 from metrics.miou import MeanIoU
 from data.utils import enet_weighing, median_freq_balancing
 from callbacks import TensorBoardPrediction
+from weighted_loss import weighted_categorical_crossentropy
 
 
 def train(
@@ -51,9 +52,10 @@ def train(
 
     # Compile the model
     # Loss: Categorical crossentropy loss
+    weighted_loss = weighted_categorical_crossentropy(class_weights)
     model.compile(
         optimizer=optim,
-        loss='categorical_crossentropy',
+        loss=weighted_loss,
         metrics=['accuracy', miou_metric.mean_iou]
     )
 
@@ -99,7 +101,6 @@ def train(
     # Train the model
     model.fit_generator(
         train_generator,
-        class_weight=class_weights,
         epochs=epochs,
         initial_epoch=initial_epoch,
         callbacks=callbacks,
@@ -218,7 +219,8 @@ def main():
                 checkpoint_path,
                 custom_objects={
                     'Conv2DTranspose': Conv2DTranspose,
-                    'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou
+                    'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou,
+                    'weighted_loss': weighted_categorical_crossentropy(class_weights)
                 }
             )
         tensorboard_logdir = os.path.join(args.checkpoint_dir, args.name)
@@ -247,7 +249,8 @@ def main():
             checkpoint_path,
             custom_objects={
                 'Conv2DTranspose': Conv2DTranspose,
-                'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou
+                'mean_iou': MeanIoU(num_classes, ignore_index).mean_iou,
+                'weighted_loss': weighted_categorical_crossentropy(class_weights)
             }
         )
         model = test(model, test_generator, args.workers, args.verbose)

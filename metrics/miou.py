@@ -81,7 +81,15 @@ class MeanIoU(object):
         if self.ignore_index is not None:
             for index in self.ignore_index:
                 conf[:, self.ignore_index] = 0
-                conf[self.ignore_index, :] = 0
+
+        np.set_printoptions(linewidth=300)
+        print()
+        print()
+        print(conf)
+        print()
+        print()
+        np.set_printoptions(edgeitems=3,infstr='inf', linewidth=75, nanstr='nan', precision=8, suppress=False, threshold=1000, formatter=None)
+
         true_positive = np.diag(conf)
         false_positive = np.sum(conf, 0) - true_positive
         false_negative = np.sum(conf, 1) - true_positive
