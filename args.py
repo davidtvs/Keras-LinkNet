@@ -103,23 +103,6 @@ def get_arguments():
             "Default: data/CamVid"
         )
     )
-    parser.add_argument(
-        "--weighing",
-        choices=['enet', 'mfb', 'none'],
-        default='ENet',
-        help=(
-            "The class weighing technique to apply to the dataset. "
-            "Default: enet"
-        )
-    )
-    parser.add_argument(
-        "--with-unlabeled",
-        dest='ignore_unlabeled',
-        action='store_false',
-        help=(
-            "The unlabeled class is not ignored."
-        )
-    )
 
     # Settings
     parser.add_argument(

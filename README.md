@@ -21,7 +21,6 @@ python main.py [-h] [--mode {train,test,full}] [--resume]
                [--epochs EPOCHS] [--learning-rate LEARNING_RATE]
                [--lr-decay LR_DECAY] [--lr-decay-epochs LR_DECAY_EPOCHS]
                [--dataset {camvid,cityscapes}] [--dataset-dir DATASET_DIR]
-               [--weighing {enet,mfb,none}] [--with-unlabeled]
                [--workers WORKERS] [--verbose {0,1,2}] [--name NAME]
                [--checkpoint-dir CHECKPOINT_DIR]
 ```

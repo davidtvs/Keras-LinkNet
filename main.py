@@ -7,7 +7,6 @@ from args import get_arguments
 from models.linknet import LinkNet
 from models.conv2d_transpose import Conv2DTranspose
 from metrics.miou import MeanIoU
-from data.utils import enet_weighing, median_freq_balancing
 from callbacks import TensorBoardPrediction
 
 
@@ -16,7 +15,6 @@ def train(
     initial_epoch,
     train_generator,
     val_generator,
-    class_weights,
     learning_rate,
     lr_decay,
     lr_decay_epochs,
@@ -42,7 +40,7 @@ def train(
 
     print(model.summary())
 
-    # Optimizer: Adam
+    # Optimizer: RMSprop
     optim = RMSprop(learning_rate)
 
     # Initialize mIoU metric
@@ -98,7 +96,6 @@ def train(
     # Train the model
     model.fit_generator(
         train_generator,
-        class_weight=class_weights,
         epochs=epochs,
         initial_epoch=initial_epoch,
         callbacks=callbacks,
@@ -146,14 +143,12 @@ def main():
         train_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='train',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='train'
         )
         val_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='val',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='val'
         )
 
         # Some information about the dataset
@@ -165,28 +160,12 @@ def main():
         print("--> Label size: {}".format(label_batch.shape))
         print("--> No. of classes: {}".format(num_classes))
 
-        # Compute class weights if needed
-        print("--> Weighing technique: {}".format(args.weighing))
-        class_weights = None
-        if (args.weighing is not None):
-            print("--> Computing class weights...")
-            print("--> (this can take a while depending on the dataset size)")
-            if args.weighing.lower() == 'enet':
-                class_weights = enet_weighing(train_generator, num_classes)
-            elif args.weighing.lower() == 'mfb':
-                class_weights = median_freq_balancing(
-                    train_generator, num_classes
-                )
-
-        print("--> Class weights: {}".format(class_weights))
-
     # Initialize test dataloader
     if args.mode.lower() in ('test', 'full'):
         test_generator = DataGenerator(
             args.dataset_dir,
             batch_size=args.batch_size,
-            mode='test',
-            ignore_unlabeled=args.ignore_unlabeled
+            mode='test'
         )
 
         # Some information about the dataset
@@ -220,7 +199,6 @@ def main():
             args.initial_epoch,
             train_generator,
             val_generator,
-            class_weights,
             args.learning_rate,
             args.lr_decay,
             args.lr_decay_epochs,
