@@ -2,6 +2,14 @@
 
 Keras implementation of [*LinkNet: Exploiting Encoder Representations for Efficient Semantic Segmentation*](https://arxiv.org/abs/1707.03718), ported from the lua-torch ([LinkNet](https://github.com/e-lab/LinkNet)) and PyTorch ([pytorch-linknet](https://github.com/e-lab/pytorch-linknet)) implementation, both created by the authors.
 
+|                                Dataset                               | Classes <sup>1</sup> | Input resolution | Batch size | Mean IoU (%) |
+|:--------------------------------------------------------------------:|:--------------------:|:----------------:|:----------:|:------------:|
+| [CamVid](http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/) |          12          |      960x480     |      2     |     47.15<sup>2</sup>    |
+|           [Cityscapes](https://www.cityscapes-dataset.com/)          |          20          |     1024x512     |      2     |     53.37<sup>3</sup>    |
+
+<sup>1</sup> Includes the unlabeled/void class.<br/>
+<sup>2</sup> Test set.<br/>
+<sup>3</sup> Validation set.
 
 ## Installation
 

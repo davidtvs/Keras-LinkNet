@@ -103,3 +103,6 @@ ENV/
 # Sublime text project
 *.sublime-workspace
 *.sublime-project
+
+# Ignore saved models
+/checkpoints/*/
